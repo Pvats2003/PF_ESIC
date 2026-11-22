@@ -44,7 +44,7 @@ test("demo account signs in and out while no database is connected", async ({ pa
   await expect(page.getByRole("alert").filter({ hasText: "demo account" })).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill("demo1234");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page.getByRole("heading", { name: "Namaste, Demo" })).toBeVisible();
-  await page.getByRole("button", { name: /sign out/i }).click();
+  await expect(page.getByText("Wage month")).toBeVisible();
+  await page.getByRole("button", { name: /sign out/i }).first().click();
   await expect(page).toHaveURL(/\/login/);
 });

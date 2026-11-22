@@ -1,4 +1,4 @@
-import { Ban, CircleCheck, CircleDashed, CircleDot, Clock3, FileCheck2, Landmark, PencilLine, Send, TriangleAlert } from "lucide-react";
+import { Ban, CircleCheck, CircleDashed, CircleDot, Clock3, FileCheck2, FileSearch, Landmark, PencilLine, RotateCcw, Send, Share2, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,9 @@ const toneClass: Record<Tone, string> = {
 
 /** Monthly record statuses (see §6 of the brief) plus the derived "overdue". */
 export type RecordStatus =
-  | "AMOUNTS_PENDING" | "READY" | "NOTIFIED" | "PART_PAID" | "PAID" | "CHALLAN_PAID" | "CLOSED" | "OVERDUE" | "VOID";
+  | "AMOUNTS_PENDING" | "READY" | "NOTIFIED" | "PART_PAID" | "PAID" | "CHALLAN_PAID" | "CLOSED" | "OVERDUE" | "VOID"
+  // overall statuses computed by the month_status view
+  | "NOT_NOTIFIED" | "PAYMENT_PENDING" | "CHALLAN_PENDING" | "PROOF_PENDING" | "RECEIPT_TO_SHARE" | "RECEIPT_TO_REISSUE" | "DONE";
 
 export const STATUS_META: Record<RecordStatus, { label: string; labelHi: string; tone: Tone; icon: LucideIcon }> = {
   AMOUNTS_PENDING: { label: "Amounts not entered", labelHi: "राशि बाकी", tone: "neutral", icon: CircleDashed },
@@ -27,6 +29,13 @@ export const STATUS_META: Record<RecordStatus, { label: string; labelHi: string;
   CLOSED: { label: "Done", labelHi: "पूर्ण", tone: "success", icon: CircleCheck },
   OVERDUE: { label: "Overdue", labelHi: "अतिदेय", tone: "danger", icon: TriangleAlert },
   VOID: { label: "Void", labelHi: "रद्द", tone: "neutral", icon: Ban },
+  NOT_NOTIFIED: { label: "Not notified", labelHi: "सूचना बाकी", tone: "neutral", icon: Send },
+  PAYMENT_PENDING: { label: "Payment pending", labelHi: "भुगतान बाकी", tone: "warning", icon: Clock3 },
+  CHALLAN_PENDING: { label: "Challan pending", labelHi: "चालान बाकी", tone: "warning", icon: Landmark },
+  PROOF_PENDING: { label: "Proof pending", labelHi: "प्रमाण बाकी", tone: "info", icon: FileSearch },
+  RECEIPT_TO_SHARE: { label: "Share receipt", labelHi: "रसीद भेजनी है", tone: "primary", icon: Share2 },
+  RECEIPT_TO_REISSUE: { label: "Reissue receipt", labelHi: "रसीद दोबारा", tone: "warning", icon: RotateCcw },
+  DONE: { label: "Done", labelHi: "पूर्ण", tone: "success", icon: CircleCheck },
 };
 
 export function Chip({

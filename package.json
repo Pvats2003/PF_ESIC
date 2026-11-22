@@ -19,7 +19,9 @@
     "icons": "tsx scripts/make-icons.ts",
     "import:map": "tsx scripts/import-excel.ts map",
     "import:apply": "tsx --env-file-if-exists=.env.local scripts/import-excel.ts apply",
-    "import:clients": "tsx --env-file-if-exists=.env.local scripts/import-clients.ts"
+    "import:clients": "tsx --env-file-if-exists=.env.local scripts/import-clients.ts",
+    "dev:db": "tsx scripts/dev-local.ts",
+    "dev:local": "LOCAL_DATABASE_URL=postgres://postgres:postgres@localhost:5432/pfesic_dev LOCAL_DEMO_USER_ID=00000000-0000-4000-8000-00000000000a next dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",
@@ -28,10 +30,12 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.77.0",
     "motion": "^14.14.0",
     "next": "16.4.6",
     "next-themes": "^0.4.6",
+    "pg": "^8.23.1",
     "radix-ui": "^1.8.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -53,7 +57,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "exceljs": "^4.4.0",
-    "pg": "^8.23.1",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",

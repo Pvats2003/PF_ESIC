@@ -18,19 +18,22 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 - **Live Supabase:** project `zvrwooosqbnvrmwuidyz` (Mumbai). Schema applied via SQL Editor from the migrations. The session's
   `pf_esic` cloud environment holds the secret key as a proxy-injected network secret (scripts get `SUPABASE_SECRET_KEY=proxy-injected`,
   and Node fetch needs `NODE_USE_ENV_PROXY=1`).
-- **Phase 2: database layer done** (`month_status`, `client_balances`, `record_payment`, `use_advance`, `void_payment`,
-  `reissue_receipt`, `record_challan`, `verify_challan`, `start_month`). Screens next.
+- **Phase 2 slice 1: done.** App shell (sidebar / bottom tabs), This month board (`/`), Start month, Fast entry (`/entry`),
+  Clients (`/clients`), Client page (`/clients/[id]`), Record payment sheet (with "Use ₹X advance?"), receipt share/download
+  (`/receipts/[id]`). Next slices: challan entry + verify, reminders + Today's queue, client edit, settings, reports
+  (reconciliation, settlement, Excel export), command palette, swipe actions, month-closed moment.
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 
 ## Commands
 
 | What | Command |
 | --- | --- |
-| Dev server | `npm run dev` |
+| Dev server against the live Supabase (needs `.env.local`) | `npm run dev` |
+| Local database with made-up demo clients (no Supabase needed) | `npm run dev:db` then `npm run dev:local` → sign in demo@pfesic.app / demo1234 |
 | Everything CI runs (lint, types, unit, DB) | `npm run check` |
 | Unit tests (money, words, dates, phones, contrast) | `npm test` |
 | DB tests: migrations, RLS, receipt numbering (needs Postgres, not Supabase) | `npm run test:db` |
-| End-to-end smoke (builds, starts on :3200) | `npm run test:e2e` |
+| End-to-end: smoke + happy path (creates `pfesic_e2e`, builds, starts on :3200) | `npm run test:e2e` |
 | Design screenshots 390×844 + 1440×900, light + dark | `npm run screenshots -- /design docs/screenshots --full` (dev server on :3100, or set `BASE_URL`) |
 | Add / remove a partner login | `npm run user:add -- email@x.com A` · `npm run user:add -- email@x.com --remove` |
 | Demo data (refuses if real clients exist) | `npm run db:seed-demo` |
@@ -54,6 +57,10 @@ src/components/receipt/  Receipt: HTML document (fixed light palette), en + hi
 src/lib/format/          money (paise), dates (IST, wage months, FY), phone (E.164), words (Indian amount in words)
 src/lib/domain/          business rules (countdown; allocation + status come in Phase 2)
 src/lib/supabase/        server / browser / proxy clients; env.ts
+src/lib/data/db.ts       THE data door: `getDb().rpc(fn, args)` → supabase.rpc in prod, `select public.fn(...)` on local Postgres
+                         (as the demo partner, role `authenticated`, so RLS applies) when LOCAL_DATABASE_URL is set
+src/app/(app)/           signed-in screens + `actions.ts` (server actions: Zod-validate, then one rpc)
+src/components/{app,board,entry,clients,payment}/  screen components
 src/lib/demo/            deterministic made-up demo data
 src/lib/import/          Excel import: normalize (spellings), parse-workbook (sheets → rows), mapping (suggestions), excel-grid (exceljs adapter)
 supabase/migrations/     SQL migrations (the only way the schema changes)
@@ -86,6 +93,9 @@ data/                    real Excel + mapping CSV: gitignored, never committed
   see docs/design-update-11.md §4. Challan done: payer us → TRRN/number enough; payer client → verified evidence.
   ₹0 due to us → payment and receipt NOT_REQUIRED.
 - Money moves only through the SQL functions (`record_payment` etc.), called from server actions after Zod validation.
+- Screens read only through SQL functions too (`board`, `client_detail`, `clients_overview`, `receipt_data`) and write
+  through `set_month_amounts`, `log_message`, `start_month`, `record_payment`. Never query tables directly from the app.
+- New SQL for the live Supabase: also ship it as a paste-once file for the SQL Editor (the owners apply it there).
   `record_payment(..., p_use_advance)` applies an advance only when the partner ticks "Use ₹X advance?".
 - Amounts can't be lowered below what's received (void + re-record); raising them flags receipts for reissue.
 - UI never says ledger/debit/credit/allocation: use Received, Deposited, Government money with <partner>, Earned, Owes, Advance.

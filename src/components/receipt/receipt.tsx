@@ -27,6 +27,10 @@ export interface ReceiptData {
   reference?: string | null;
   receivedBy: { en: string; hi?: string };
   balanceAfterPaise: number;
+  /** Already received for these months before this payment (part payments, advance used). */
+  earlierPaise?: number;
+  /** Part of this payment kept as advance (not applied to any month yet). */
+  advancePaise?: number;
   challans?: Array<{ month: ISODate; pfTrrn?: string | null; esicChallanNo?: string | null; paidOn?: ISODate | null }>;
   signatureUrl?: string | null;
   voided?: boolean;
@@ -46,6 +50,8 @@ const T = {
     esic: "Employees' State Insurance (ESIC)",
     charge: "Service charge",
     totalDue: "Total payable",
+    earlier: "Received earlier",
+    advance: "Kept as advance",
     received: "Amount received",
     balance: "Balance remaining",
     mode: "Payment mode",
@@ -75,6 +81,8 @@ const T = {
     esic: "कर्मचारी राज्य बीमा (ESIC)",
     charge: "सेवा शुल्क",
     totalDue: "कुल देय राशि",
+    earlier: "पहले प्राप्त",
+    advance: "अग्रिम के रूप में जमा",
     received: "प्राप्त राशि",
     balance: "शेष राशि",
     mode: "भुगतान का माध्यम",
@@ -252,6 +260,12 @@ export function Receipt({ data, lang }: { data: ReceiptData; lang: Lang }) {
                 <td style={{ ...num, padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>{formatINR(l.paise)}</td>
               </tr>
             ))}
+            {(data.earlierPaise ?? 0) > 0 && (
+              <tr>
+                <td style={{ padding: "7px 0", borderBottom: `1px solid ${C.line}`, color: C.muted }}>{t.earlier}</td>
+                <td style={{ ...num, padding: "7px 0", borderBottom: `1px solid ${C.line}`, color: C.muted }}>−{formatINR(data.earlierPaise!)}</td>
+              </tr>
+            )}
             <tr>
               <td style={{ padding: "8px 0", fontWeight: 700 }}>{t.totalDue}</td>
               <td style={{ ...num, padding: "8px 0", fontWeight: 700 }}>{formatINR(data.totalDuePaise)}</td>
@@ -275,6 +289,12 @@ export function Receipt({ data, lang }: { data: ReceiptData; lang: Lang }) {
             </span>
             <span style={{ color: C.muted }}>{t.receivedBy}</span>
             <span style={{ fontWeight: 600 }}>{isHi && data.receivedBy.hi ? data.receivedBy.hi : data.receivedBy.en}</span>
+            {(data.advancePaise ?? 0) > 0 && (
+              <>
+                <span style={{ color: C.muted }}>{t.advance}</span>
+                <span style={{ ...num, textAlign: "left", fontWeight: 700, color: C.indigo }}>{formatINR(data.advancePaise!)}</span>
+              </>
+            )}
             <span style={{ color: C.muted }}>{t.balance}</span>
             <span style={{ ...num, textAlign: "left", fontWeight: 700, color: partial ? C.amber : C.green }}>{formatINR(data.balanceAfterPaise)}</span>
           </div>
