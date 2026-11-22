@@ -9,15 +9,21 @@
  *   data/partner_adjustments.csv  the "−3400"-style settlement lines (fill in who paid whom)
  *   data/import_preview.md        month-by-month totals vs the Excel TOTAL rows, and everything flagged
  *
- * Step 2 (`apply`) imports into the database once the CSVs are approved. It is built after review.
+ *   data/import_decisions.json    the open questions (double fees, expenses, blank charges, October dues…)
+ *
+ * Step 2, once those are filled in:
+ *   DATABASE_URL=… npx tsx scripts/import-excel.ts apply [--dry-run]
+ * Runs in one transaction and refuses to commit unless every month matches the Excel totals.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 import { formatINR } from "../src/lib/format/money";
 import { formatMonth } from "../src/lib/format/dates";
-import { collectOccurrences, suggestMapping, toCsv } from "../src/lib/import/mapping";
+import { collectOccurrences, suggestMapping, toCsv, type MappingRow } from "../src/lib/import/mapping";
 import { normalizeName } from "../src/lib/import/normalize";
+import { Client } from "pg";
+import { applyImport, type AdjustmentRow, type ImportDecisions } from "../src/lib/import/apply";
 import { cellOf, readWorkbook } from "../src/lib/import/excel-grid";
 import { orderSheets, type ParsedSheet } from "../src/lib/import/parse-workbook";
 
@@ -54,8 +60,9 @@ async function readVendors(path: string) {
 
 async function main() {
   const mode = process.argv[2];
+  if (mode === "apply") return apply();
   if (mode !== "map") {
-    console.error("Usage: npx tsx scripts/import-excel.ts map   (step 2, `apply`, comes after the mapping is approved)");
+    console.error("Usage: npx tsx scripts/import-excel.ts map | apply [--dry-run]");
     process.exit(1);
   }
   if (!existsSync(FILE)) throw new Error(`Put the workbook at ${FILE} (it stays untouched)`);
@@ -84,6 +91,7 @@ async function main() {
   );
 
   writeFileSync(`${OUT}/import_preview.md`, preview(ordered, listSheets, mapping, vendors, adjustments, orderWarnings));
+  if (!existsSync(`${OUT}/import_decisions.json`)) writeFileSync(`${OUT}/import_decisions.json`, decisionsTemplate(ordered));
 
   // Console summary
   const clients = new Set(mapping.filter((m) => m.kind === "client").map((m) => m.suggested_client));
@@ -101,6 +109,100 @@ async function main() {
   }
   console.log(`\nWrote ${target}, ${OUT}/partner_adjustments.csv, ${OUT}/import_preview.md`);
   console.log("Stopped here: review the CSVs, then run step 2 (apply).");
+}
+
+function decisionsTemplate(ordered: ParsedSheet[]): string {
+  const fees = ordered.flatMap((s) => s.extras.filter((e) => e.serviceType === "monthly_fee" || /CHALLAN/i.test(e.description ?? "")).map((e) => `${e.ref}: ${e.name} ₹${e.amountPaise / 100}`));
+  const t = {
+    _help: "Fill this in, then run: npm run import:apply -- --dry-run. Keys starting with _ are notes and are ignored.",
+    settled_through: "2026-09-01",
+    _settled_through: "Months up to this one import as fully paid history. The next month (October 2026) is live only for clients listed in live_month_dues.",
+    live_month_dues: {} as Record<string, number>,
+    _live_month_dues: "October 2026 dues still outstanding, e.g. { \"KAMLI SAH\": 500 }. Leave {} for none.",
+    skip_refs: [] as string[],
+    _skip_refs_candidates: fees,
+    _skip_refs: "Cells of below-TOTAL lines NOT to import, e.g. the second copy of a double fee: [\"MAR26!B44\"].",
+    blank_charges: Object.fromEntries(ordered.flatMap((s) => s.listOnly ? [] : s.clientRows.filter((r) => r.chargePaise === null).map((r) => [r.ref, null]))),
+    _blank_charges: "Rupees for each blank charge cell; null imports as ₹0.",
+    expense_paid_by: Object.fromEntries(ordered.flatMap((s) => [...s.sideNotes.filter((n) => n.kind === "expense").map((n) => [n.ref, null]), ...s.extras.filter((e) => e.possibleExpense).map((e) => [e.ref, null])])),
+    _expense_paid_by: "Who paid each expense: \"A\", \"R\" or null (shared / not known).",
+    client_pays_challan: [] as string[],
+    _client_pays_challan: "Clients who normally pay their own challan (default for everyone else: we pay).",
+    rename: {} as Record<string, string>,
+    _rename: "Optional nicer names, e.g. { \"PRADEEEP ENTERPRISES\": \"PRADEEP ENTERPRISES\", \"PS\": \"…\" }.",
+  };
+  return JSON.stringify(t, null, 2) + "\n";
+}
+
+/** Minimal CSV reader for the files this script writes (quoted fields, doubled quotes). */
+export function readCsv(text: string): Array<Record<string, string>> {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') q = false;
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      if (row.some((x) => x !== "")) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  const [head, ...body] = rows;
+  return body.map((r) => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] ?? "").trim()])));
+}
+
+async function apply() {
+  const dryRun = process.argv.includes("--dry-run");
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("Set DATABASE_URL to the database to import into");
+  for (const f of [FILE, `${OUT}/client_mapping.csv`, `${OUT}/partner_adjustments.csv`, `${OUT}/import_decisions.json`]) {
+    if (!existsSync(f)) throw new Error(`Missing ${f}. Run the map step first.`);
+  }
+  const sheets = await readWorkbook(FILE);
+  const vendors = await readVendors(VENDORS);
+  const mapping = readCsv(readFileSync(`${OUT}/client_mapping.csv`, "utf8")) as unknown as MappingRow[];
+  const adjustments = readCsv(readFileSync(`${OUT}/partner_adjustments.csv`, "utf8")).map((r) => ({ ...r, amount: Number(r.amount) })) as unknown as AdjustmentRow[];
+  const raw = JSON.parse(readFileSync(`${OUT}/import_decisions.json`, "utf8")) as Record<string, unknown>;
+  const decisions = Object.fromEntries(Object.entries(raw).filter(([k]) => !k.startsWith("_"))) as unknown as ImportDecisions;
+
+  // Every spelling in the workbook must be in the reviewed mapping.
+  const fresh = suggestMapping(collectOccurrences(sheets, vendors.map((v) => v.name)));
+  const known = new Set(mapping.flatMap((m) => m.raw_name.split(" / ").map((x) => normalizeName(x))));
+  const unknown = fresh.filter((m) => m.raw_name.split(" / ").some((x) => !known.has(normalizeName(x))));
+  if (unknown.length) throw new Error(`The workbook has spellings not in client_mapping.csv (${unknown.map((u) => u.raw_name).join(", ")}). Run map again and review.`);
+
+  const db = new Client({ connectionString: url });
+  await db.connect();
+  try {
+    const r = await applyImport(db, {
+      fileName: FILE.split("/").pop()!, fileHash: sha256(FILE), sheets: sheets.filter((s) => s.total || s.listOnly),
+      mapping, adjustments, vendors, decisions, importedBy: process.env.IMPORTED_BY ?? process.env.USER ?? "import script", dryRun,
+    });
+    printSummary(r);
+  } finally {
+    await db.end();
+  }
+}
+
+function printSummary(r: Awaited<ReturnType<typeof applyImport>>) {
+  console.log(r.status === "dry_run" ? "DRY RUN: nothing was saved\n" : r.status === "already_imported" ? "Already imported: nothing changed\n" : `Imported (batch ${r.batchId})\n`);
+  console.log("Table               Before   After");
+  for (const k of Object.keys(r.before)) console.log(`${k.padEnd(18)} ${String(r.before[k]).padStart(7)} ${String(r.after[k]).padStart(7)}`);
+  if (r.months.length) {
+    console.log("\nMonth     Excel TOTAL   Imported   Below-TOTAL Excel   Imported   Check");
+    for (const m of r.months) console.log(`${m.month.slice(0, 7)}   ${inr(m.excelTotal).padStart(11)} ${inr(m.imported).padStart(10)}   ${inr(m.extrasExcel).padStart(17)} ${inr(m.extrasImported).padStart(10)}   ${m.ok ? "✓" : "✗"}`);
+  }
+  console.log(`\nRows: ${r.rows.imported} imported, ${r.rows.unchanged} already there, ${r.rows.skipped} skipped`);
+  for (const n of r.notes) console.log(`• ${n}`);
 }
 
 function preview(

@@ -11,8 +11,11 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 - **Phase 0 (setup): done.** Schema + RLS, auth (allow-list, no sign-up), design tokens, `/design` style guide, receipt component, PWA shell, CI.
 - **Section 11 design update: adopted** (see `docs/design-update-11.md`): challan_transactions, import tracking,
   pf/esic/charge/extra payment parts, `financial_ledger` VIEW, message prepared/shared states.
-- **Phase 1 (Excel import): step 1 done, waiting for mapping review.** `npm run import:map` writes
-  `data/client_mapping.csv`, `data/partner_adjustments.csv`, `data/import_preview.md`. Step 2 (`apply`) is built after approval.
+- **Phase 1 (Excel import): built, waiting for the reviewed files.** `npm run import:map` writes `data/client_mapping.csv`,
+  `data/partner_adjustments.csv`, `data/import_decisions.json`, `data/import_preview.md`. `npm run import:apply -- --dry-run`
+  then `npm run import:apply` (needs `DATABASE_URL`). One transaction; refuses unless every month matches the Excel.
+- **Phase 2: database layer done** (`month_status`, `client_balances`, `record_payment`, `use_advance`, `void_payment`,
+  `reissue_receipt`, `record_challan`, `verify_challan`, `start_month`). Screens next.
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 
 ## Commands
@@ -28,6 +31,7 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 | Add / remove a partner login | `npm run user:add -- email@x.com A` · `npm run user:add -- email@x.com --remove` |
 | Demo data (refuses if real clients exist) | `npm run db:seed-demo` |
 | Excel import step 1: suggest client mapping (reads `data/*.xlsx`, never modifies them) | `npm run import:map` |
+| Excel import step 2: import the reviewed files (`--dry-run` first) | `npm run import:apply -- --dry-run` |
 | Regenerate PWA icons from `public/icons/icon.svg` | `npm run icons` |
 
 DB tests use `TEST_DATABASE_ADMIN_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`). They create the
@@ -73,7 +77,12 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 - `financial_ledger` is a VIEW over payments/allocations/challan_transactions/expenses/partner_transfers. Never a table,
   never written to. Voids show as reversal rows.
 - Challans live only in `challan_transactions` (one active per month+type; correct by void + replace; VERIFIED needs evidence + partner).
-- Statuses are computed (amount / notification / payment / challan / receipt dimensions + overdue); see docs/design-update-11.md §4.
+- Statuses are computed in the `month_status` view (amount / notification / payment / challan / receipt + overdue + overall);
+  see docs/design-update-11.md §4. Challan done: payer us → TRRN/number enough; payer client → verified evidence.
+  ₹0 due to us → payment and receipt NOT_REQUIRED.
+- Money moves only through the SQL functions (`record_payment` etc.), called from server actions after Zod validation.
+  `record_payment(..., p_use_advance)` applies an advance only when the partner ticks "Use ₹X advance?".
+- Amounts can't be lowered below what's received (void + re-record); raising them flags receipts for reissue.
 - UI never says ledger/debit/credit/allocation: use Received, Deposited, Government money with <partner>, Earned, Owes, Advance.
 - Manual WhatsApp messages are only `prepared` → `shared`; delivered/read only for the API channel (DB check).
 

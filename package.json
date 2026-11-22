@@ -17,7 +17,8 @@
     "user:add": "tsx --env-file-if-exists=.env.local scripts/add-user.ts",
     "screenshots": "tsx scripts/screenshot.ts",
     "icons": "tsx scripts/make-icons.ts",
-    "import:map": "tsx scripts/import-excel.ts map"
+    "import:map": "tsx scripts/import-excel.ts map",
+    "import:apply": "tsx --env-file-if-exists=.env.local scripts/import-excel.ts apply"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",

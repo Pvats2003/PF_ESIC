@@ -30,34 +30,45 @@ async function asRoleCommit<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** Numbers already used in a financial year (other test files may have issued receipts first). */
+async function used(fy: string): Promise<number> {
+  const { rows } = await c.query(`select last_no from receipt_counters where financial_year=$1`, [fy]);
+  return rows[0]?.last_no ?? 0;
+}
+const no = (fy: string, n: number) => `R/${fy}/${String(n).padStart(4, "0")}`;
+
 describe("receipt numbering", () => {
   it("is gapless within a financial year and restarts on 1 April", async () => {
+    const base = await used("2026-27");
+    const base2 = await used("2027-28");
     const p1 = await insertPayment(c, clientId, alokId, "2027-03-30");
     const p2 = await insertPayment(c, clientId, alokId, "2027-03-31");
     const p3 = await insertPayment(c, clientId, alokId, "2027-04-01");
     const r1 = (await issue(p1)).rows[0];
     const r2 = (await issue(p2)).rows[0];
     const r3 = (await issue(p3)).rows[0];
-    expect(r1.receipt_no).toBe("R/2026-27/0001");
-    expect(r2.receipt_no).toBe("R/2026-27/0002");
-    expect(r3.receipt_no).toBe("R/2027-28/0001");
+    expect(r1.receipt_no).toBe(no("2026-27", base + 1));
+    expect(r2.receipt_no).toBe(no("2026-27", base + 2));
+    expect(r3.receipt_no).toBe(no("2027-28", base2 + 1));
   });
 
   it("gives the number back when the transaction fails", async () => {
     const p = await insertPayment(c, clientId, alokId, "2026-12-01");
+    const base = await used("2026-27");
     await expect(
       asRoleCommit(async () => {
         await c.query(`select issue_receipt($1, 'en')`, [p]);
         throw new Error("network dropped");
       }),
     ).rejects.toThrow("network dropped");
-    expect((await issue(p)).rows[0].receipt_no).toBe("R/2026-27/0003");
+    expect((await issue(p)).rows[0].receipt_no).toBe(no("2026-27", base + 1));
   });
 
   it("never hands out the same number to two partners at once", async () => {
     const { connect: mk } = await import("./helpers");
     const conns = await Promise.all(Array.from({ length: 8 }, () => mk()));
     const pays = await Promise.all(conns.map(() => insertPayment(c, clientId, alokId, "2026-12-02")));
+    const base = await used("2026-27");
     const results = await Promise.all(
       conns.map(async (k, i) => {
         await k.query("begin");
@@ -69,7 +80,7 @@ describe("receipt numbering", () => {
         return r.rows[0].seq as number;
       }),
     );
-    expect(results.sort((a, b) => a - b)).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(results.sort((a, b) => a - b)).toEqual(Array.from({ length: 8 }, (_, i) => base + 1 + i));
   });
 
   it("refuses a receipt for a void payment", async () => {

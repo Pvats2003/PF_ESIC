@@ -40,7 +40,16 @@ Also adopted: business address **Munger, Bihar / मुंगेर, बिह�
 
 PF/ESIC edits after a receipt: allowed and audited; excess paid becomes advance; receipt flagged "needs reissue".
 
-## 4. Status rules (computed in a view)
+## 4. Status rules (computed in the `month_status` view)
+
+Owner rule changes (approved):
+1. Challan done: payer **us** → a TRRN / challan number entered is enough (evidence optional);
+   payer **client** → evidence + partner confirmation required (Proof pending until then).
+2. Amount due to us = ₹0 → payment and receipt are NOT_REQUIRED, so the month can reach Done.
+3. Recording a payment for a client with an advance asks "Use ₹X advance?" in the payment sheet (never applied silently).
+4. Lowering PF/ESIC/charge below what's already received is refused: void the payment and record it again
+   (matches the original spec's "void and re-issue"). Raising amounts flags issued receipts "needs reissue".
+
 
 - Amounts: ENTERED when PF and ESIC both filled (0 = nil).
 - Notification: NOTIFIED when a dues / challan-ready message was shared.
