@@ -18,7 +18,8 @@
     "screenshots": "tsx scripts/screenshot.ts",
     "icons": "tsx scripts/make-icons.ts",
     "import:map": "tsx scripts/import-excel.ts map",
-    "import:apply": "tsx --env-file-if-exists=.env.local scripts/import-excel.ts apply"
+    "import:apply": "tsx --env-file-if-exists=.env.local scripts/import-excel.ts apply",
+    "import:clients": "tsx --env-file-if-exists=.env.local scripts/import-clients.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",

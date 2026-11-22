@@ -11,9 +11,13 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 - **Phase 0 (setup): done.** Schema + RLS, auth (allow-list, no sign-up), design tokens, `/design` style guide, receipt component, PWA shell, CI.
 - **Section 11 design update: adopted** (see `docs/design-update-11.md`): challan_transactions, import tracking,
   pf/esic/charge/extra payment parts, `financial_ledger` VIEW, message prepared/shared states.
-- **Phase 1 (Excel import): built, waiting for the reviewed files.** `npm run import:map` writes `data/client_mapping.csv`,
-  `data/partner_adjustments.csv`, `data/import_decisions.json`, `data/import_preview.md`. `npm run import:apply -- --dry-run`
-  then `npm run import:apply` (needs `DATABASE_URL`). One transaction; refuses unless every month matches the Excel.
+- **Phase 1 (Excel import): done as a FRESH START.** The owners chose not to bring old history over: `npm run import:clients`
+  imported only the 38 clients on the Nov 26 list (charge, partner, PF/ESIC codes, spellings as aliases) into Supabase.
+  No months, payments, extras or adjustments were imported. The full-history importer (`import:map` / `import:apply`) stays
+  in the repo, unused, in case history is ever wanted.
+- **Live Supabase:** project `zvrwooosqbnvrmwuidyz` (Mumbai). Schema applied via SQL Editor from the migrations. The session's
+  `pf_esic` cloud environment holds the secret key as a proxy-injected network secret (scripts get `SUPABASE_SECRET_KEY=proxy-injected`,
+  and Node fetch needs `NODE_USE_ENV_PROXY=1`).
 - **Phase 2: database layer done** (`month_status`, `client_balances`, `record_payment`, `use_advance`, `void_payment`,
   `reissue_receipt`, `record_challan`, `verify_challan`, `start_month`). Screens next.
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
@@ -32,6 +36,7 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 | Demo data (refuses if real clients exist) | `npm run db:seed-demo` |
 | Excel import step 1: suggest client mapping (reads `data/*.xlsx`, never modifies them) | `npm run import:map` |
 | Excel import step 2: import the reviewed files (`--dry-run` first) | `npm run import:apply -- --dry-run` |
+| Fresh-start client import (current list only; safe to re-run) | `npm run import:clients -- --dry-run` |
 | Regenerate PWA icons from `public/icons/icon.svg` | `npm run icons` |
 
 DB tests use `TEST_DATABASE_ADMIN_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`). They create the
@@ -130,7 +135,8 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 - Walk-in customers are `clients.kind = 'occasional'` (no monthly records), so payments and receipts work the same.
 - Excel REMARK A/R is stored per month in `monthly_records.handled_by_partner_id`; NA = no work that month; D = fee due, collected later.
   Rows below TOTAL like "PF & ESIC MAY-26" are late payment of that month's charge, not new charges.
-- History up to Sep 2026 imports as `legacy_settled` (no receipts). October 2026 onward is live.
+- Fresh start (owners' decision): no history imported; November 2026 is the first month worked in the app.
+  ESIC codes from VENDORCODES are flagged unverified (Excel lost digits); ITC LIMITED, PS, RAJEEV KUMAR MISHRA have ₹0 charge to set.
 - Split: 50/50 via dated `split_rules`. Shared expenses (ink, paper) are deducted before the split. Historical "−3400"-style lines import as `partner_transfers` with note "imported from Excel".
 - Part payments get a "PART PAID / आंशिक भुगतान" seal on the receipt; full payments get "PAID / भुगतान प्राप्त".
 - Fee attribution = the month's A/R handler; physical cash = received_by. Dated 50/50 split_rules; no per-partner overrides.
