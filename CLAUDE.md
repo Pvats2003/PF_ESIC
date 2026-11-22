@@ -124,6 +124,9 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 
 ## Decisions log
 
+- Demo sign-in (`demo@pfesic.app` / `demo1234`, src/lib/demo/session.ts) works ONLY while Supabase env vars are absent
+  (e.g. a fresh Vercel deploy). Adding the keys disables it and the proxy ignores the demo cookie. It shows made-up data only.
+
 - Walk-in customers are `clients.kind = 'occasional'` (no monthly records), so payments and receipts work the same.
 - Excel REMARK A/R is stored per month in `monthly_records.handled_by_partner_id`; NA = no work that month; D = fee due, collected later.
   Rows below TOTAL like "PF & ESIC MAY-26" are late payment of that month's charge, not new charges.

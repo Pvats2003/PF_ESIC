@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { DEMO_COOKIE } from "@/lib/demo/session";
 import { supabaseEnv } from "./env";
 
 /** Paths anyone can open. Everything else needs a signed-in, allow-listed user. */
@@ -19,7 +20,15 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!env) {
-    if (isPublicPath(pathname)) return NextResponse.next();
+    // No database configured: demo mode (made-up data only).
+    const demo = request.cookies.get(DEMO_COOKIE)?.value === "1";
+    if (demo && pathname === "/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    if (demo || isPublicPath(pathname)) return NextResponse.next();
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

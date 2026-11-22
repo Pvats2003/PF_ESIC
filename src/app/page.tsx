@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cookies } from "next/headers";
+import { supabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 // Phase 0 placeholder. The "This Month" dashboard replaces this in Phase 2.
@@ -31,6 +33,16 @@ export default function Home() {
 }
 
 async function Greeting() {
+  if (!supabaseEnv()) {
+    // Demo mode (the proxy only lets the demo cookie through when no database is configured)
+    await cookies();
+    return (
+      <div>
+        <h1 className="text-xl font-semibold">Namaste, Demo</h1>
+        <span className="mt-2 inline-block rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info">Demo mode · made-up data</span>
+      </div>
+    );
+  }
   const supabase = await createClient();
   const { data: allowed } = await supabase.rpc("is_app_user");
   if (!allowed) {

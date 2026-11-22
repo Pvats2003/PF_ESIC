@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEMO_COOKIE, DEMO_EMAIL, DEMO_PASSWORD, demoAvailable } from "@/lib/demo/session";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseEnv } from "@/lib/supabase/env";
 import { loginSchema } from "./schema";
@@ -12,9 +14,17 @@ function safeNext(next: unknown): string {
 }
 
 export async function signIn(input: { email: string; password: string; next?: string }): Promise<LoginState> {
-  if (!supabaseEnv()) return { error: "The app isn't connected to its database yet." };
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check your details" };
+
+  // No database yet: only the demo account works, and it only shows made-up data.
+  if (!supabaseEnv()) {
+    if (!demoAvailable() || parsed.data.email !== DEMO_EMAIL || parsed.data.password !== DEMO_PASSWORD) {
+      return { error: `Use the demo account: ${DEMO_EMAIL} / ${DEMO_PASSWORD}` };
+    }
+    (await cookies()).set(DEMO_COOKIE, "1", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 12 });
+    redirect(safeNext(input.next));
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);

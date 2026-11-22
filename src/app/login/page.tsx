@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wordmark } from "@/components/brand/logo";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo/session";
 import { supabaseEnv } from "@/lib/supabase/env";
 import { LoginForm } from "./login-form";
 
@@ -19,12 +20,14 @@ export default function LoginPage() {
           <h1 className="text-lg font-semibold">Welcome back</h1>
           <p className="mt-1 mb-6 text-sm text-ink-muted">Sign in with the account Alok or Rajeev set up for you.</p>
           {!configured && (
-            <p role="status" className="mb-4 rounded-xl bg-warning-soft px-3 py-2.5 text-sm text-warning ring-1 ring-warning-line ring-inset">
-              The database isn&apos;t connected yet. Add the Supabase keys to <code>.env.local</code>.
-            </p>
+            <div role="status" className="mb-4 rounded-xl bg-info-soft px-3 py-2.5 text-sm text-info ring-1 ring-info-line ring-inset">
+              <div className="font-semibold">Demo mode</div>
+              No database is connected yet, so only the demo account works, with made-up data:
+              <div className="tabular mt-1 font-semibold">{DEMO_EMAIL} · {DEMO_PASSWORD}</div>
+            </div>
           )}
           <Suspense fallback={<FormSkeleton />}>
-            <LoginForm disabled={!configured} />
+            <LoginForm />
           </Suspense>
         </div>
         <p className="mt-6 text-center text-xs text-ink-faint">

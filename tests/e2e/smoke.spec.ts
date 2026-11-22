@@ -35,3 +35,16 @@ test("PWA manifest is served", async ({ request }) => {
   expect(m.display).toBe("standalone");
   expect(m.icons.some((i: { purpose?: string }) => i.purpose === "maskable")).toBe(true);
 });
+
+test("demo account signs in and out while no database is connected", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("demo@pfesic.app");
+  await page.getByLabel("Password", { exact: true }).fill("wrong-pass");
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "demo account" })).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill("demo1234");
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page.getByRole("heading", { name: "Namaste, Demo" })).toBeVisible();
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await expect(page).toHaveURL(/\/login/);
+});
