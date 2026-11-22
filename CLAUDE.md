@@ -1,14 +1,18 @@
 # PF ESIC Desk
 
 Client, collection and receipt manager for a two-partner PF/ESIC consultancy in Bihar (Alok = `A`, Rajeev Kumar Mishra = `R`).
-Replaces a monthly Excel sheet plus handwritten notes. Mobile-first PWA; the partners mostly use Android phones.
+Replaces a monthly Excel sheet plus handwritten notes. **Desktop-first** (sidebar, wide tables, keyboard), fully usable
+on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 49312.
 
 @AGENTS.md
 
 ## Status
 
 - **Phase 0 (setup): done.** Schema + RLS, auth (allow-list, no sign-up), design tokens, `/design` style guide, receipt component, PWA shell, CI.
-- **Phase 1 (Excel import): next.** `scripts/import-excel.ts` → `data/client_mapping.csv` → review → import.
+- **Section 11 design update: adopted** (see `docs/design-update-11.md`): challan_transactions, import tracking,
+  pf/esic/charge/extra payment parts, `financial_ledger` VIEW, message prepared/shared states.
+- **Phase 1 (Excel import): step 1 done, waiting for mapping review.** `npm run import:map` writes
+  `data/client_mapping.csv`, `data/partner_adjustments.csv`, `data/import_preview.md`. Step 2 (`apply`) is built after approval.
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 
 ## Commands
@@ -23,6 +27,7 @@ Replaces a monthly Excel sheet plus handwritten notes. Mobile-first PWA; the par
 | Design screenshots 390×844 + 1440×900, light + dark | `npm run screenshots -- /design docs/screenshots --full` (dev server on :3100, or set `BASE_URL`) |
 | Add / remove a partner login | `npm run user:add -- email@x.com A` · `npm run user:add -- email@x.com --remove` |
 | Demo data (refuses if real clients exist) | `npm run db:seed-demo` |
+| Excel import step 1: suggest client mapping (reads `data/*.xlsx`, never modifies them) | `npm run import:map` |
 | Regenerate PWA icons from `public/icons/icon.svg` | `npm run icons` |
 
 DB tests use `TEST_DATABASE_ADMIN_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`). They create the
@@ -41,6 +46,7 @@ src/lib/format/          money (paise), dates (IST, wage months, FY), phone (E.1
 src/lib/domain/          business rules (countdown; allocation + status come in Phase 2)
 src/lib/supabase/        server / browser / proxy clients; env.ts
 src/lib/demo/            deterministic made-up demo data
+src/lib/import/          Excel import: normalize (spellings), parse-workbook (sheets → rows), mapping (suggestions), excel-grid (exceljs adapter)
 supabase/migrations/     SQL migrations (the only way the schema changes)
 scripts/                 seed-demo, add-user, screenshot, make-icons, db-test-setup (import-excel in Phase 1)
 tests/unit|db|e2e        Vitest unit, Vitest+pg database, Playwright
@@ -60,6 +66,16 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 - A wage month is its first day (`2026-11-01`). Due date = `due_day` (default 15) of the next month (`dueDateFor`).
 - The default working month is the previous calendar month (`currentWageMonth`).
 - Display `DD/MM/YYYY` (`formatDate`) or `15 Dec` (`formatDayMonth`). Financial year April–March (`financialYear`).
+
+**Money model (Section 11)**
+- Government money (PF, ESIC), our fees (charge, extras), advances, deposits and partner money are always separate.
+  Payment parts are `pf | esic | charge | extra`; anything not applied is advance. Split order: oldest month, then PF → ESIC → charge → extras.
+- `financial_ledger` is a VIEW over payments/allocations/challan_transactions/expenses/partner_transfers. Never a table,
+  never written to. Voids show as reversal rows.
+- Challans live only in `challan_transactions` (one active per month+type; correct by void + replace; VERIFIED needs evidence + partner).
+- Statuses are computed (amount / notification / payment / challan / receipt dimensions + overdue); see docs/design-update-11.md §4.
+- UI never says ledger/debit/credit/allocation: use Received, Deposited, Government money with <partner>, Earned, Owes, Advance.
+- Manual WhatsApp messages are only `prepared` → `shared`; delivered/read only for the API channel (DB check).
 
 **Data integrity (enforced in the DB, tested in tests/db)**
 - RLS on every table: `anon` gets nothing; signed-in users who aren't in `app_users` get nothing; no DELETE policies.
@@ -105,3 +121,7 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 - History up to Sep 2026 imports as `legacy_settled` (no receipts). October 2026 onward is live.
 - Split: 50/50 via dated `split_rules`. Shared expenses (ink, paper) are deducted before the split. Historical "−3400"-style lines import as `partner_transfers` with note "imported from Excel".
 - Part payments get a "PART PAID / आंशिक भुगतान" seal on the receipt; full payments get "PAID / भुगतान प्राप्त".
+- Fee attribution = the month's A/R handler; physical cash = received_by. Dated 50/50 split_rules; no per-partner overrides.
+- Excel import: client rows' charges must equal each sheet's TOTAL row (checked); medium/low mappings need explicit approval;
+  "PF & ESIC <month>" lines below TOTAL become `monthly_fee` extras on the month named; NA → no record; blank charge → ₹0 (flagged);
+  Nov 26 sheet = active-client list for the current month (no records imported).

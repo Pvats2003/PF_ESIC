@@ -124,7 +124,7 @@ describe("money rows", () => {
   it("allocations must target exactly one thing, and gov money only a month", async () => {
     const p = await insertPayment(c, clientId, alokId, "2026-12-08");
     await expect(
-      c.query(`insert into payment_allocations (payment_id, component, amount_paise) values ($1,'fee',100)`, [p]),
+      c.query(`insert into payment_allocations (payment_id, component, amount_paise) values ($1,'charge',100)`, [p]),
     ).rejects.toThrow(/check constraint/);
   });
 

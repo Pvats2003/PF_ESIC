@@ -39,12 +39,19 @@ export async function seedDemo(db: Client, count = 38): Promise<{ clients: numbe
       const clientId = ids[r.clientKey];
       const { rows: [rec] } = await db.query(
         `insert into monthly_records (client_id, wage_month, pf_paise, esic_paise, charge_paise, challan_payer, due_date,
-           handled_by_partner_id, legacy_settled, pf_trrn, pf_paid_on, esic_paid_on, challan_paid_by)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11,$12) returning id`,
+           handled_by_partner_id, legacy_settled)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,
         [clientId, r.month, r.pfPaise, r.esicPaise, r.chargePaise, r.challanPayer, r.dueDate,
-         r.partnerCode ? partners[r.partnerCode] : null, r.legacySettled, r.pfTrrn, r.challanPaidOn,
-         r.challanPaidOn ? r.challanPayer : null],
+         r.partnerCode ? partners[r.partnerCode] : null, r.legacySettled],
       );
+      if (r.challanPaidOn && r.pfPaise !== null) {
+        const by = r.challanPayer === "us" ? partners[r.partnerCode ?? "A"] : null;
+        await db.query(
+          `insert into challan_transactions (monthly_record_id, challan_type, trrn, challan_number, amount_paise, paid_on, paid_by, paid_by_partner_id)
+           values ($1,'pf',$2,null,$3,$4,$5,$6), ($1,'esic',null,$7,$8,$4,$5,$6)`,
+          [rec.id, r.pfTrrn, r.pfPaise, r.challanPaidOn, r.challanPayer, by, `42-${r.pfTrrn?.slice(-8)}`, r.esicPaise],
+        );
+      }
       if (r.notified) {
         await db.query(
           `insert into message_log (client_id, monthly_record_id, type, language, body, sent_at)
@@ -64,10 +71,19 @@ export async function seedDemo(db: Client, count = 38): Promise<{ clients: numbe
          values ($1,$2,$3,$4,$5,gen_random_uuid()) returning id`,
         [clientId, amount, receivedOn, payments % 3 === 0 ? "cash" : "upi", partners[r.partnerCode ?? "A"]],
       );
-      // Government money first, then the fee
-      const govPart = Math.min(gov, amount);
-      if (govPart > 0) await db.query(`insert into payment_allocations (payment_id, monthly_record_id, component, amount_paise) values ($1,$2,'gov',$3)`, [pay.id, rec.id, govPart]);
-      if (amount - govPart > 0) await db.query(`insert into payment_allocations (payment_id, monthly_record_id, component, amount_paise) values ($1,$2,'fee',$3)`, [pay.id, rec.id, amount - govPart]);
+      // PF first, then ESIC, then the fee
+      let left = amount;
+      const parts: Array<["pf" | "esic" | "charge", number]> = [
+        ["pf", r.challanPayer === "us" ? r.pfPaise ?? 0 : 0],
+        ["esic", r.challanPayer === "us" ? r.esicPaise ?? 0 : 0],
+        ["charge", r.chargePaise],
+      ];
+      for (const [part, due] of parts) {
+        const take = Math.min(due, left);
+        if (take <= 0) continue;
+        await db.query(`insert into payment_allocations (payment_id, monthly_record_id, component, amount_paise) values ($1,$2,$3,$4)`, [pay.id, rec.id, part, take]);
+        left -= take;
+      }
       const { rows: [n] } = await db.query(`select * from take_receipt_number($1)`, [receivedOn]);
       await db.query(
         `insert into receipts (receipt_no, financial_year, seq, payment_id, client_id, language) values ($1,$2,$3,$4,$5,'hi')`,

@@ -38,9 +38,9 @@ const RECEIPT: ReceiptData = {
   business: {
     nameEn: "Rajeev Kumar Mishra",
     nameHi: "राजीव कुमार मिश्रा",
-    addressEn: "PF & ESIC Consultant, Bhagalpur, Bihar",
-    addressHi: "पीएफ एवं ईएसआईसी सलाहकार, भागलपुर, बिहार",
-    phones: ["+919876543210"],
+    addressEn: "PF & ESIC Consultant, Munger, Bihar",
+    addressHi: "पीएफ एवं ईएसआईसी सलाहकार, मुंगेर, बिहार",
+    phones: ["+919430449312"],
   },
   receiptNo: "R/2026-27/0148",
   issuedOn: "2026-12-11",
@@ -479,7 +479,7 @@ export function DesignGuide() {
         </div>
       </Section>
 
-      <Section id="receipt" title="Receipt" note="Rendered as HTML so Hindi shapes correctly; shared as a crisp PNG or PDF. Letterhead in both scripts, a guilloche band, the seal and the amount in words. The phone number shown is a placeholder.">
+      <Section id="receipt" title="Receipt" note="Rendered as HTML so Hindi shapes correctly; shared as a crisp PNG or PDF. Letterhead in both scripts, a guilloche band, the seal and the amount in words.">
         <div className="mb-4">
           <Segmented ariaLabel="Receipt language" value={receiptLang} onChange={setReceiptLang} options={[{ value: "en", label: "English" }, { value: "hi", label: <span className="font-hindi">हिंदी</span> }]} />
         </div>
