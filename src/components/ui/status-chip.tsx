@@ -1,0 +1,74 @@
+import { Ban, CircleCheck, CircleDashed, CircleDot, Clock3, FileCheck2, Landmark, PencilLine, Send, TriangleAlert } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type Tone = "success" | "warning" | "danger" | "neutral" | "info" | "primary";
+
+const toneClass: Record<Tone, string> = {
+  success: "bg-success-soft text-success ring-success-line",
+  warning: "bg-warning-soft text-warning ring-warning-line",
+  danger: "bg-danger-soft text-danger ring-danger-line",
+  neutral: "bg-neutral-soft text-neutral ring-neutral-line",
+  info: "bg-info-soft text-info ring-info-line",
+  primary: "bg-primary-soft text-primary-text ring-transparent",
+};
+
+/** Monthly record statuses (see §6 of the brief) plus the derived "overdue". */
+export type RecordStatus =
+  | "AMOUNTS_PENDING" | "READY" | "NOTIFIED" | "PART_PAID" | "PAID" | "CHALLAN_PAID" | "CLOSED" | "OVERDUE" | "VOID";
+
+export const STATUS_META: Record<RecordStatus, { label: string; labelHi: string; tone: Tone; icon: LucideIcon }> = {
+  AMOUNTS_PENDING: { label: "Amounts not entered", labelHi: "राशि बाकी", tone: "neutral", icon: CircleDashed },
+  READY: { label: "Ready to notify", labelHi: "सूचना देनी है", tone: "neutral", icon: PencilLine },
+  NOTIFIED: { label: "Notified", labelHi: "सूचित", tone: "warning", icon: Send },
+  PART_PAID: { label: "Part paid", labelHi: "आंशिक भुगतान", tone: "warning", icon: CircleDot },
+  PAID: { label: "Paid", labelHi: "भुगतान प्राप्त", tone: "success", icon: CircleCheck },
+  CHALLAN_PAID: { label: "Challan paid", labelHi: "चालान जमा", tone: "success", icon: FileCheck2 },
+  CLOSED: { label: "Done", labelHi: "पूर्ण", tone: "success", icon: CircleCheck },
+  OVERDUE: { label: "Overdue", labelHi: "अतिदेय", tone: "danger", icon: TriangleAlert },
+  VOID: { label: "Void", labelHi: "रद्द", tone: "neutral", icon: Ban },
+};
+
+export function Chip({
+  tone = "neutral", icon: Icon, children, className, size = "md",
+}: { tone?: Tone; icon?: LucideIcon; children: React.ReactNode; className?: string; size?: "sm" | "md" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium ring-1 ring-inset",
+        size === "sm" ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-xs",
+        toneClass[tone],
+        className,
+      )}
+    >
+      {Icon && <Icon aria-hidden className="size-3.5 stroke-[2]" />}
+      {children}
+    </span>
+  );
+}
+
+export function StatusChip({ status, lang = "en", size }: { status: RecordStatus; lang?: "en" | "hi"; size?: "sm" | "md" }) {
+  const m = STATUS_META[status];
+  return (
+    <Chip tone={m.tone} icon={m.icon} size={size} className={lang === "hi" ? "font-hindi" : undefined}>
+      {lang === "hi" ? m.labelHi : m.label}
+    </Chip>
+  );
+}
+
+/** "Client pays challan" marker — sky blue, as the brief asks. */
+export function ClientPaysChip() {
+  return (
+    <Chip tone="info" icon={Landmark} size="sm">
+      Client pays challan
+    </Chip>
+  );
+}
+
+export function PendingChip({ children }: { children: React.ReactNode }) {
+  return (
+    <Chip tone="warning" icon={Clock3} size="sm">
+      {children}
+    </Chip>
+  );
+}

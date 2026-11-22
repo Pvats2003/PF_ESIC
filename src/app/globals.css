@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+/*
+ * PF ESIC Desk — "Modern Ledger" design tokens.
+ * Every colour is a CSS variable with a light and a dark value.
+ * Components use the Tailwind names mapped in @theme below
+ * (bg-paper, text-ink, bg-primary, text-success, …), never raw hex.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Surfaces */
+  --paper: #faf8f5;            /* app background: warm off-white */
+  --surface: #fffefc;          /* cards */
+  --surface-2: #f4f1ec;        /* inset areas, table header, inputs */
+  --surface-3: #ece7df;        /* pressed / hover on inset */
+  --hairline: #e7e1d7;         /* dividers and card edges */
+  --hairline-strong: #d6cfc3;
+  --card-highlight: transparent;
+
+  /* Text */
+  --ink: #161a23;              /* primary text: 16.5:1 on paper */
+  --ink-muted: #565c6a;        /* secondary text: 6.6:1 on paper */
+  --ink-faint: #696e7c;        /* captions: AA on paper */
+
+  /* Brand */
+  --primary: #1e2a5a;          /* deep ink indigo */
+  --primary-hover: #263470;
+  --primary-ink: #ffffff;
+  --primary-text: #1e2a5a;     /* key numbers, active nav */
+  --primary-soft: #e8ebf6;
+  --accent: #e8a33d;           /* marigold: highlights only */
+  --accent-text: #8a5300;      /* marigold as text: 5.6:1 on paper */
+  --accent-soft: #fcefd7;
+  --ring: #3d55b8;
+
+  /* Status (always paired with an icon or a label) */
+  --success: #047857;  --success-soft: #def3e9;  --success-line: #a7dcc4;
+  --warning: #92400e;  --warning-soft: #fcefd7;  --warning-line: #f1cf95;
+  --danger:  #be123c;  --danger-soft:  #fbe5ea;  --danger-line:  #f2b2c1;
+  --neutral: #475569;  --neutral-soft: #edeff3;  --neutral-line: #d3d8e0;
+  --info:    #0369a1;  --info-soft:    #e0f1fb;  --info-line:    #a9d6ef;
+
+  /* Depth */
+  --shadow-card: 0 1px 2px rgb(30 26 20 / 0.04), 0 2px 8px -2px rgb(30 26 20 / 0.06);
+  --shadow-raised: 0 2px 4px rgb(30 26 20 / 0.04), 0 12px 32px -8px rgb(30 26 20 / 0.14);
+  --shadow-sheet: 0 -8px 40px -8px rgb(30 26 20 / 0.18);
+
+  --radius: 14px;
+  color-scheme: light;
+}
+
+.dark {
+  --paper: #0e1116;
+  --surface: #151a22;
+  --surface-2: #1b212b;
+  --surface-3: #232a36;
+  --hairline: #252c37;
+  --hairline-strong: #323a47;
+  --card-highlight: rgb(255 255 255 / 0.045);
+
+  --ink: #eceef2;              /* 15.8:1 on paper */
+  --ink-muted: #a4abb8;        /* 7.9:1 on paper */
+  --ink-faint: #8a92a0;        /* 5.6:1 on paper */
+
+  --primary: #5568c7;          /* white text 4.9:1 */
+  --primary-hover: #4d60bd;
+  --primary-ink: #ffffff;
+  --primary-text: #b3bdf5;
+  --primary-soft: #1d2440;
+  --accent: #eaa947;
+  --accent-text: #f2bc66;
+  --accent-soft: #33260f;
+  --ring: #8d9cf0;
+
+  --success: #4fd1a1;  --success-soft: #0f2a21;  --success-line: #1d4b3a;
+  --warning: #f5c065;  --warning-soft: #2e2311;  --warning-line: #54401b;
+  --danger:  #fb8aa0;  --danger-soft:  #33151d;  --danger-line:  #5c2633;
+  --neutral: #a9b3c2;  --neutral-soft: #1e242e;  --neutral-line: #333c4a;
+  --info:    #6ccaf5;  --info-soft:    #0f2533;  --info-line:    #1d4560;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px -4px rgb(0 0 0 / 0.35);
+  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.55);
+  --shadow-sheet: 0 -8px 40px -8px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-text: var(--primary-text);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-line: var(--neutral-line);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+
+  /* Latin first, Devanagari glyphs fall through to Noto Sans Devanagari */
+  --font-sans: var(--font-jakarta), var(--font-devanagari), ui-sans-serif, system-ui, sans-serif;
+  --font-hindi: var(--font-devanagari), var(--font-jakarta), sans-serif;
+
+  /* The only type sizes: 12 / 14 / 16 / 20 / 28 / 40 */
+  --text-xs: 12px;   --text-xs--line-height: 16px;
+  --text-sm: 14px;   --text-sm--line-height: 20px;
+  --text-base: 16px; --text-base--line-height: 24px;
+  --text-lg: 20px;   --text-lg--line-height: 28px;
+  --text-xl: 28px;   --text-xl--line-height: 34px;  --text-xl--letter-spacing: -0.02em;
+  --text-2xl: 40px;  --text-2xl--line-height: 44px; --text-2xl--letter-spacing: -0.03em;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-sheet: var(--shadow-sheet);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--hairline);
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  :lang(hi), .font-hindi {
+    font-family: var(--font-hindi);
+    /* Devanagari needs a little more room for matras above and below */
+    line-height: 1.6;
+  }
+  ::selection {
+    background: var(--primary-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* All money: tabular, lining figures so columns of rupees line up */
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum", "lnum";
+  }
+  .card-highlight {
+    box-shadow: inset 0 1px 0 var(--card-highlight), var(--shadow-card);
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

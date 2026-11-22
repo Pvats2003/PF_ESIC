@@ -1,0 +1,38 @@
+# Local development with the Supabase CLI (`npx supabase start`, needs Docker).
+# Only the settings this project relies on are listed; the rest use CLI defaults.
+project_id = "pf-esic-desk"
+
+[api]
+port = 54321
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+# Demo data is loaded with `npm run db:seed-demo`, never automatically.
+enabled = false
+
+[studio]
+port = 54323
+
+[storage]
+file_size_limit = "10MiB"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+# No public sign-up: partners are added with `npm run user:add`.
+enable_signup = false
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+secure_password_change = true
+
+[auth.rate_limit]
+sign_in_sign_ups = 30
