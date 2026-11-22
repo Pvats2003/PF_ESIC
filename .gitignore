@@ -53,3 +53,4 @@ next-env.d.ts
 # local scratch
 /scripts/.*.tmp.ts
 *.whl
+/.local-uploads/

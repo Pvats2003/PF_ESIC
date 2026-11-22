@@ -20,8 +20,13 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   and Node fetch needs `NODE_USE_ENV_PROXY=1`).
 - **Phase 2 slice 1: done.** App shell (sidebar / bottom tabs), This month board (`/`), Start month, Fast entry (`/entry`),
   Clients (`/clients`), Client page (`/clients/[id]`), Record payment sheet (with "Use ₹X advance?"), receipt share/download
-  (`/receipts/[id]`). Next slices: challan entry + verify, reminders + Today's queue, client edit, settings, reports
-  (reconciliation, settlement, Excel export), command palette, swipe actions, month-closed moment.
+  (`/receipts/[id]`).
+- **Phase 2 slice 2: done.** Add/edit clients (phones normalised, ESIC 17 digits + "checked" tick), challans (record /
+  correct by replace with reason / upload proof ≤ 4 MB / confirm client proof), WhatsApp reminders (template-built,
+  editable, Hindi/English, logged as shared), Today's queue (`/queue`: overdue → reminders → challans to file → proof →
+  receipts, one at a time). Next: settings (business profile, templates, split), reports (reconciliation, settlement,
+  receipt registers, Excel export), command palette, swipe actions, month-closed moment, void/reissue UI.
+- **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126).
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 
 ## Commands
@@ -60,7 +65,9 @@ src/lib/supabase/        server / browser / proxy clients; env.ts
 src/lib/data/db.ts       THE data door: `getDb().rpc(fn, args)` → supabase.rpc in prod, `select public.fn(...)` on local Postgres
                          (as the demo partner, role `authenticated`, so RLS applies) when LOCAL_DATABASE_URL is set
 src/app/(app)/           signed-in screens + `actions.ts` (server actions: Zod-validate, then one rpc)
-src/components/{app,board,entry,clients,payment}/  screen components
+src/components/{app,board,entry,clients,payment,challan,messages,queue}/  screen components
+src/lib/data/storage.ts  private file uploads (Supabase Storage bucket `challans`; `.local-uploads/` in development)
+src/lib/domain/          board (totals/filters/search), receipt (mapping + message), messages (reminders), queue (Today), countdown
 src/lib/demo/            deterministic made-up demo data
 src/lib/import/          Excel import: normalize (spellings), parse-workbook (sheets → rows), mapping (suggestions), excel-grid (exceljs adapter)
 supabase/migrations/     SQL migrations (the only way the schema changes)

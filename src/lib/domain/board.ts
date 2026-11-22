@@ -43,6 +43,8 @@ export interface BoardRow {
   partner_code: "A" | "R" | null;
   partner_name: string | null;
   aliases: string[];
+  latest_receipt_id: string | null;
+  challans: Array<{ id: string; type: "pf" | "esic"; trrn: string | null; number: string | null; paid_on: string; paid_by: "us" | "client"; verified: boolean; has_evidence: boolean }> | null;
 }
 
 export interface Board {
@@ -51,6 +53,7 @@ export interface Board {
   due_day: number;
   rows: BoardRow[];
   not_started: number;
+  partners?: Array<{ id: string; code: "A" | "R"; name: string }>;
 }
 
 const challanDone = (s: BoardRow["pf_challan_status"]) => s !== "PENDING";

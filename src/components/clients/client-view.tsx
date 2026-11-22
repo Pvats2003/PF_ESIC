@@ -2,6 +2,8 @@ import { ChevronLeft, MessageCircle, Phone, Receipt as ReceiptIcon, ShieldAlert 
 import Link from "next/link";
 import type { ClientDetail } from "@/app/(app)/actions";
 import { RecordPaymentButton } from "@/components/payment/record-payment-sheet";
+import { EditClientButton } from "./client-form-sheet";
+import { MonthActions } from "./month-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +20,10 @@ const CHALLAN: Record<string, { label: string; tone: "success" | "warning" | "ne
   VERIFIED: { label: "Verified", tone: "success" },
 };
 const MODE = { cash: "Cash", upi: "UPI", bank: "Bank" } as const;
+const MESSAGE: Record<string, string> = {
+  dues_we_pay: "Dues reminder", challan_ready_client_pays: "Challan details", overdue: "Overdue reminder",
+  payment_received: "Payment thanks", challan_filed: "Challan filed", receipt: "Receipt", other: "Message",
+};
 const dash = <span className="text-ink-faint">—</span>;
 
 export function ClientView({ d }: { d: ClientDetail }) {
@@ -42,6 +48,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
         <div className="flex flex-wrap gap-2">
           {c.phone && <Button asChild variant="secondary"><a href={`tel:${c.phone}`}><Phone />Call</a></Button>}
           {wa && <Button asChild variant="secondary"><a href={`https://wa.me/${waMeNumber(wa)}`} target="_blank" rel="noopener noreferrer"><MessageCircle />WhatsApp</a></Button>}
+          <EditClientButton client={c} />
           <RecordPaymentButton clientId={c.id} />
         </div>
       </div>
@@ -68,12 +75,12 @@ export function ClientView({ d }: { d: ClientDetail }) {
           <EmptyState icon={ReceiptIcon} title="No months yet" body="Months appear here once a month is started on the This month page." />
         ) : (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[860px] border-separate border-spacing-0 text-sm">
+            <table className="w-full min-w-[1000px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="[&>th]:h-10 [&>th]:border-y [&>th]:border-hairline [&>th]:bg-surface-2 [&>th]:px-4 [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wide [&>th]:text-ink-muted [&>th]:uppercase">
                   <th className="text-left">Month</th><th className="text-right">PF</th><th className="text-right">ESIC</th><th className="text-right">Fee</th>
                   <th className="text-right">Due to us</th><th className="text-right">Received</th><th className="text-right">Owes</th>
-                  <th className="text-left">Challans</th><th className="text-left">Status</th>
+                  <th className="text-left">Challans</th><th className="text-left">Status</th><th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -96,6 +103,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
                       </span>
                     </td>
                     <td><StatusChip status={m.overall_status as RecordStatus} size="sm" /></td>
+                    <td><MonthActions month={m} client={c} partners={d.partners} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -136,7 +144,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
             <ul className="mt-3 divide-y divide-hairline">
               {d.messages.map((m, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <span className="font-medium">{m.type.replaceAll("_", " ")}</span>
+                  <span className="font-medium">{MESSAGE[m.type] ?? m.type}</span>
                   <span className="text-ink-muted">{m.status === "shared" ? "Shared" : "Prepared"} · {m.language === "hi" ? "हिंदी" : "English"} · {formatDate(m.sent_at.slice(0, 10))}</span>
                 </li>
               ))}

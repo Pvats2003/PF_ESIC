@@ -53,6 +53,12 @@ export function dueDateFor(wageMonth: ISODate, dueDay = 15): ISODate {
   return iso(y, m, Math.min(Math.max(1, dueDay), daysInMonth(y, m)));
 }
 
+export function addDays(d: ISODate, n: number): ISODate {
+  const [y, m, day] = parts(d);
+  const t = new Date(Date.UTC(y, m - 1, day + n));
+  return iso(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
+}
+
 /** Whole days from `from` to `to` (negative when `to` is in the past). */
 export function daysBetween(from: ISODate, to: ISODate): number {
   const [y1, m1, d1] = parts(from);

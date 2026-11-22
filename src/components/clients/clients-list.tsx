@@ -10,6 +10,7 @@ import { Money } from "@/components/ui/money";
 import { Segmented } from "@/components/ui/segmented";
 import { Chip, ClientPaysChip } from "@/components/ui/status-chip";
 import { matchesSearch } from "@/lib/domain/board";
+import { AddClientButton } from "./client-form-sheet";
 import { cn } from "@/lib/utils";
 
 export interface ClientListRow {
@@ -43,6 +44,7 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
           <Segmented ariaLabel="Show" value={show} onChange={setShow} options={[
             { value: "active", label: "Active" }, { value: "owes", label: "Owes" }, { value: "check", label: "Codes to check" }, { value: "all", label: "All" },
           ]} />
+          <AddClientButton />
           <div className="relative sm:w-72">
             <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />
             <Input aria-label="Search clients" placeholder="Name, owner or old spelling" value={q} onChange={(e) => setQ(e.target.value)} className="pl-10" />

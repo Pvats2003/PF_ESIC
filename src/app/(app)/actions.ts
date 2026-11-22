@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireDb } from "@/lib/data/db";
 import type { ReceiptRow } from "@/lib/domain/receipt";
+import { normalizeIndianPhone } from "@/lib/format/phone";
+import type { MessageSetup } from "@/lib/domain/messages";
+import { uploadPrivateFile } from "@/lib/data/storage";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -136,5 +139,133 @@ export async function logMessage(input: z.infer<typeof messageSchema>): Promise<
     });
     revalidatePath("/");
     return id;
+  });
+}
+
+// ─── Slice 2: clients, challans, messages ───────────────────────────────────
+
+const phoneField = z
+  .string()
+  .trim()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    const n = normalizeIndianPhone(v);
+    if (!n) ctx.addIssue({ code: "custom", message: `“${v}” isn't a valid Indian mobile number` });
+    return n;
+  });
+
+const clientSchema = z.object({
+  firm_name: z.string().trim().min(1, "Firm name is needed").max(120),
+  firm_name_hi: z.string().trim().max(120).optional().default(""),
+  owner_name: z.string().trim().max(80).optional().default(""),
+  phone: phoneField,
+  whatsapp_phone: phoneField,
+  alt_phone: phoneField,
+  address: z.string().trim().max(300).optional().default(""),
+  pf_establishment_code: z.string().trim().max(30).optional().default(""),
+  esic_code: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s/g, ""))
+    .refine((v) => v === "" || /^\d{17}$/.test(v), "ESIC code is 17 digits"),
+  esic_code_verified: z.boolean(),
+  default_charge_paise: paise,
+  partner_code: z.enum(["A", "R", ""]),
+  challan_payer_default: z.enum(["us", "client"]),
+  preferred_language: z.enum(["hi", "en"]),
+  active: z.boolean(),
+  kind: z.enum(["regular", "occasional"]),
+  notes: z.string().trim().max(1000).optional().default(""),
+});
+export type ClientInput = z.input<typeof clientSchema>;
+
+export async function saveClient(clientId: string | null, input: ClientInput): Promise<ActionResult<string>> {
+  if (clientId !== null && !uuid.safeParse(clientId).success) return { ok: false, error: "Unknown client" };
+  const v = clientSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    const id = await (await requireDb()).rpc<string>("save_client", { p_client_id: clientId, p_data: v.data });
+    revalidatePath("/clients");
+    revalidatePath(`/clients/${id}`);
+    revalidatePath("/");
+    return id;
+  });
+}
+
+export async function getMessageSetup(): Promise<ActionResult<MessageSetup>> {
+  return run(async () => (await requireDb()).rpc<MessageSetup>("message_setup"));
+}
+
+const challanSchema = z.object({
+  monthlyRecordId: uuid,
+  clientId: uuid,
+  type: z.enum(["pf", "esic"]),
+  reference: z.string().trim().min(3, "Enter the TRRN / challan number").max(40),
+  amountPaise: paise,
+  paidOn: isoDate,
+  paidBy: z.enum(["us", "client"]),
+  partnerId: uuid.nullable(),
+  replacesId: uuid.nullable(),
+  replaceReason: z.string().trim().max(200).optional(),
+  verifyNow: z.boolean(),
+});
+
+const MAX_FILE = 4 * 1024 * 1024; // Vercel caps request bodies at 4.5 MB
+const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+
+/** Records (or corrects) a challan, optionally with its proof file, and optionally confirms the proof. */
+export async function saveChallan(form: FormData): Promise<ActionResult<string>> {
+  const raw = JSON.parse(String(form.get("data") ?? "{}"));
+  const v = challanSchema.safeParse(raw);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the challan details" };
+  const d = v.data;
+  if (d.paidBy === "us" && !d.partnerId) return { ok: false, error: "Choose who paid the challan" };
+  if (d.replacesId && !d.replaceReason) return { ok: false, error: "Say why the challan is being corrected" };
+  const file = form.get("file");
+  if (file instanceof File && file.size > 0) {
+    if (file.size > MAX_FILE) return { ok: false, error: "File is larger than 4 MB. Take a screenshot or a smaller PDF." };
+    if (!FILE_TYPES.includes(file.type)) return { ok: false, error: "Use a PDF, PNG, JPG or WEBP file" };
+  }
+  if (d.verifyNow && !(file instanceof File && file.size > 0)) return { ok: false, error: "Attach the proof to confirm it" };
+  return run(async () => {
+    const db = await requireDb();
+    const id = await db.rpc<string>("record_challan", {
+      p_monthly_record_id: d.monthlyRecordId, p_type: d.type, p_amount_paise: d.amountPaise, p_paid_on: d.paidOn, p_paid_by: d.paidBy,
+      p_paid_by_partner_id: d.paidBy === "us" ? d.partnerId : null,
+      p_trrn: d.type === "pf" ? d.reference : null, p_challan_number: d.type === "esic" ? d.reference : null,
+      p_evidence_path: null, p_replaces_id: d.replacesId, p_replace_reason: d.replaceReason ?? null, p_notes: null,
+    });
+    if (file instanceof File && file.size > 0) {
+      const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+      const path = await uploadPrivateFile("challans", `${d.clientId}/${d.monthlyRecordId}/${d.type}-${id}.${ext}`, file);
+      await db.rpc("attach_challan_evidence", { p_challan_id: id, p_path: path });
+      if (d.verifyNow) await db.rpc("verify_challan", { p_challan_id: id });
+    }
+    revalidatePath("/");
+    revalidatePath(`/clients/${d.clientId}`);
+    return id;
+  });
+}
+
+/** Attach proof to an existing challan and confirm it (a partner checked the client's challan). */
+export async function verifyChallanWithProof(form: FormData): Promise<ActionResult<true>> {
+  const id = uuid.safeParse(form.get("challanId"));
+  const clientId = uuid.safeParse(form.get("clientId"));
+  const recordId = uuid.safeParse(form.get("monthlyRecordId"));
+  if (!id.success || !clientId.success || !recordId.success) return { ok: false, error: "Unknown challan" };
+  const file = form.get("file");
+  const hasFile = file instanceof File && file.size > 0;
+  if (hasFile && (file.size > MAX_FILE || !FILE_TYPES.includes(file.type))) return { ok: false, error: "Use a PDF or image under 4 MB" };
+  return run(async () => {
+    const db = await requireDb();
+    if (hasFile) {
+      const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+      const path = await uploadPrivateFile("challans", `${clientId.data}/${recordId.data}/proof-${id.data}.${ext}`, file);
+      await db.rpc("attach_challan_evidence", { p_challan_id: id.data, p_path: path });
+    }
+    await db.rpc("verify_challan", { p_challan_id: id.data });
+    revalidatePath("/");
+    revalidatePath(`/clients/${clientId.data}`);
+    return true as const;
   });
 }

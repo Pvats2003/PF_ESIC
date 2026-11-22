@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { startMonth } from "@/app/(app)/actions";
+import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,7 @@ export function BoardView({ board }: { board: Board }) {
   const [filter, setFilter] = useState<FilterId>("all");
   const [query, setQuery] = useState("");
   const [payFor, setPayFor] = useState<string | null>(null);
+  const [remindFor, setRemindFor] = useState<BoardRow | null>(null);
   const s = useMemo(() => summarize(board.rows), [board.rows]);
   const due = board.rows[0]?.due_date ?? dueDateFor(board.month, board.due_day);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, board.rows.filter((r) => matchesFilter(r, f.id)).length])), [board.rows]);
@@ -121,7 +123,7 @@ export function BoardView({ board }: { board: Board }) {
             </Card>
           ) : (
             <>
-              <DesktopTable rows={rows} onPay={setPayFor} />
+              <DesktopTable rows={rows} onPay={setPayFor} onRemind={setRemindFor} />
               <PhoneList rows={rows} onPay={setPayFor} />
             </>
           )}
@@ -129,6 +131,7 @@ export function BoardView({ board }: { board: Board }) {
       )}
 
       {payFor && <RecordPaymentSheet clientId={payFor} open onOpenChange={(o) => !o && setPayFor(null)} />}
+      {remindFor && <RowReminder row={remindFor} onClose={() => setRemindFor(null)} />}
     </div>
   );
 }
@@ -166,7 +169,22 @@ const statusOf = (r: BoardRow): RecordStatus => r.overall_status as RecordStatus
 const pendingAmounts = (r: BoardRow) => r.amount_status === "AMOUNTS_PENDING" && r.challan_payer === "us";
 const dash = <span className="text-ink-faint">—</span>;
 
-function DesktopTable({ rows, onPay }: { rows: BoardRow[]; onPay: (id: string) => void }) {
+export function RowReminder({ row, onClose, onSent }: { row: BoardRow; onClose: () => void; onSent?: () => void }) {
+  return (
+    <ReminderSheet
+      open
+      onOpenChange={(o) => !o && onClose()}
+      onSent={onSent}
+      clientId={row.client_id}
+      monthlyRecordId={row.monthly_record_id}
+      phone={row.whatsapp_phone ?? row.phone}
+      language={row.preferred_language}
+      figures={{ ...row, firm_name_hi: null }}
+    />
+  );
+}
+
+function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
   const reduce = useReducedMotion();
   const totals = summarize(rows);
   return (
@@ -183,7 +201,7 @@ function DesktopTable({ rows, onPay }: { rows: BoardRow[]; onPay: (id: string) =
               <th className="text-right">Received</th>
               <th className="text-right">Owes</th>
               <th className="text-left">Status</th>
-              <th className="w-12"><span className="sr-only">Actions</span></th>
+              <th className="w-24"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -214,7 +232,12 @@ function DesktopTable({ rows, onPay }: { rows: BoardRow[]; onPay: (id: string) =
                 <td className="tabular text-right">{r.received ? <Money paise={r.received} size="sm" tone="success" /> : dash}</td>
                 <td className="tabular text-right">{pendingAmounts(r) ? dash : r.owes ? <Money paise={r.owes} size="sm" tone={r.overdue ? "danger" : "warning"} /> : dash}</td>
                 <td><StatusChip status={statusOf(r)} size="sm" /></td>
-                <td className="text-right">
+                <td className="text-right whitespace-nowrap">
+                  {r.amount_status === "ENTERED" && (r.owes > 0 || r.challan_payer === "client") && r.overall_status !== "DONE" && (
+                    <Button variant="ghost" size="icon" aria-label={`Send reminder to ${r.firm_name}`} title="Send reminder" onClick={() => onRemind(r)} className="size-9">
+                      <Send />
+                    </Button>
+                  )}
                   {r.owes > 0 && (
                     <Button variant="ghost" size="icon" aria-label={`Record payment for ${r.firm_name}`} onClick={() => onPay(r.client_id)} className="size-9">
                       <Wallet />

@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarRange, Keyboard, Users } from "lucide-react";
+import { CalendarRange, Keyboard, ListTodo, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
   { href: "/", label: "This month", icon: CalendarRange, match: (p: string) => p === "/" },
+  { href: "/queue", label: "Today", icon: ListTodo, match: (p: string) => p.startsWith("/queue") },
   { href: "/entry", label: "Fast entry", icon: Keyboard, match: (p: string) => p.startsWith("/entry") },
   { href: "/clients", label: "Clients", icon: Users, match: (p: string) => p.startsWith("/clients") },
 ] as const;

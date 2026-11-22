@@ -6,7 +6,7 @@ const row = (over: Partial<BoardRow>): BoardRow => ({
   due_to_us: 0, received: 0, owes: 0, amount_status: "ENTERED", notification_status: "NOT_NOTIFIED", payment_status: "UNPAID",
   pf_challan_status: "PENDING", esic_challan_status: "PENDING", receipt_status: "NOT_ISSUED", receipt_shared: false, receipt_needs_reissue: false,
   overdue: false, overall_status: "NOT_NOTIFIED", pf_paise: 0, esic_paise: 0, charge_paise: 0, extras_paise: 0, firm_name: "X", owner_name: null,
-  phone: null, whatsapp_phone: null, preferred_language: "hi", esic_code_verified: false, has_esic_code: false, partner_code: "A", partner_name: "Alok", aliases: [],
+  phone: null, whatsapp_phone: null, preferred_language: "hi", esic_code_verified: false, has_esic_code: false, partner_code: "A", partner_name: "Alok", aliases: [], latest_receipt_id: null, challans: null,
   ...over,
 });
 
