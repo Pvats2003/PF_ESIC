@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { DetailSkeleton, NoDatabase } from "@/components/app/page-states";
 import { ExportView, ReceiptRegister, ReconciliationView, ReportsHeader, SettlementView, type Recon, type RegisterRow, type Tab } from "@/components/reports/reports-view";
 import { MoneyMovesPanel, type MoneyMoves } from "@/components/reports/money-moves";
-import { getDb } from "@/lib/data/db";
+import { getDb, type Db } from "@/lib/data/db";
 import { parsePeriod } from "@/lib/domain/period";
 import type { SettlementData } from "@/lib/domain/settlement";
 
@@ -15,6 +15,17 @@ export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
     <Suspense fallback={<DetailSkeleton />}>
       <ReportsLoader searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+async function Settle({ db, args }: { db: Db; args: Record<string, string> }) {
+  // Both figures at once instead of one after the other.
+  const [d, moves] = await Promise.all([db.rpc<SettlementData>("settlement", args), db.rpc<MoneyMoves>("money_moves", args)]);
+  return (
+    <>
+      <SettlementView d={d} />
+      <MoneyMovesPanel moves={moves} />
+    </>
   );
 }
 
@@ -30,12 +41,7 @@ async function ReportsLoader({ searchParams }: { searchParams: PageProps<"/repor
     <div className="space-y-6">
       <ReportsHeader tab={tab} from={from} to={to} />
       {tab === "reconcile" && <ReconciliationView r={await db.rpc<Recon>("reconciliation", args)} />}
-      {tab === "settle" && (
-        <>
-          <SettlementView d={await db.rpc<SettlementData>("settlement", args)} />
-          <MoneyMovesPanel moves={await db.rpc<MoneyMoves>("money_moves", args)} />
-        </>
-      )}
+      {tab === "settle" && <Settle db={db} args={args} />}
       {tab === "receipts" && <ReceiptRegister rows={await db.rpc<RegisterRow[]>("receipt_register", args)} />}
       {tab === "export" && <ExportView from={from} to={to} />}
     </div>

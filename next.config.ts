@@ -5,7 +5,12 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   devIndicators: false,
   // Challan proofs (≤ 4 MB) are uploaded through a server action; Vercel caps request bodies at 4.5 MB.
-  experimental: { serverActions: { bodySizeLimit: "4.4mb" } },
+  experimental: {
+    serverActions: { bodySizeLimit: "4.4mb" },
+    // Going back to a page opened in the last 30 s shows it at once. Saving anything still
+    // refreshes the screen (revalidatePath / router.refresh clear this cache).
+    staleTimes: { dynamic: 30 },
+  },
   partialPrefetching: true,
   turbopack: {
     rules: {

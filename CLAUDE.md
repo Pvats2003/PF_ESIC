@@ -52,7 +52,12 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   extra-over-owed needs a tick before it becomes advance, duplicate-name warning when adding a client.
   UI says "Cancel/Cancelled" (never "Void"); no "N" partner badge.
 - **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
-  update 4 = 20261127, update 5 = 20261128, update 6 = 20261129). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
+  update 4 = 20261127, update 5 = 20261128, update 6 = 20261129, update 7 = 20261130). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
+- **Speed:** `vercel.json` pins functions to `bom1` (Mumbai, next to Supabase ap-south-1); the proxy skips the session
+  check for link prefetches; `staleTimes.dynamic = 30`; Devanagari font not preloaded. Never filter a VIEW with a
+  correlated `not exists` over another view, or a per-row subquery into `month_status`: `live_ledger` did (Reports took
+  ~8 s); update 7 joins each entry's source row instead and totals per client once (now ~50 ms). Time new report SQL with
+  `explain analyze` on the demo data before shipping.
 - Reports read `live_ledger` (financial_ledger minus legacy_settled months and minus voided entries and their reversals), so imported history never distorts
   "government money held".
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.

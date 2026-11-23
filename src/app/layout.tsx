@@ -17,6 +17,8 @@ const devanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari", "latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
+  // Only fetched when Hindi text is on screen, so English pages don't download it on every load.
+  preload: false,
 });
 
 export const metadata: Metadata = {

@@ -35,6 +35,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Link prefetches (the app quietly loading pages you might open) don't need the session check:
+  // the page itself still runs as the signed-in user, and the database refuses anyone else.
+  // Skipping it saves one trip to Supabase for every link on screen.
+  if (request.headers.get("next-router-prefetch") === "1" && !isPublicPath(pathname)) return NextResponse.next();
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(env.url, env.key, {
     cookies: {
