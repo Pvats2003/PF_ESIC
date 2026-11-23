@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { startMonth } from "@/app/(app)/actions";
 import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
+import { useLang } from "@/components/providers/lang-provider";
 import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,27 +35,28 @@ export function BoardView({ board }: { board: Board }) {
   const due = board.rows[0]?.due_date ?? dueDateFor(board.month, board.due_day);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, board.rows.filter((r) => matchesFilter(r, f.id)).length])), [board.rows]);
   const rows = useMemo(() => board.rows.filter((r) => matchesFilter(r, filter) && matchesSearch(r, query)), [board.rows, filter, query]);
-  const monthName = formatMonth(board.month).split(" ")[0];
+  const { lang, t } = useLang();
+  const monthName = formatMonth(board.month, lang).split(" ")[0];
 
   return (
     <div>
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-xs font-medium tracking-wide text-ink-muted uppercase">Wage month</div>
+          <div className="text-xs font-medium tracking-wide text-ink-muted uppercase">{t("Wage month")}</div>
           <div className="mt-1 flex items-center gap-1">
-            <Button asChild variant="ghost" size="icon" aria-label="Previous month"><Link href={`/?month=${monthParam(addMonths(board.month, -1))}`}><ChevronLeft /></Link></Button>
-            <h1 className="min-w-[200px] text-center text-xl font-semibold tracking-[-0.02em] sm:min-w-[230px]">{formatMonth(board.month)}</h1>
-            <Button asChild variant="ghost" size="icon" aria-label="Next month"><Link href={`/?month=${monthParam(addMonths(board.month, 1))}`}><ChevronRight /></Link></Button>
+            <Button asChild variant="ghost" size="icon" aria-label={t("Previous month")}><Link href={`/?month=${monthParam(addMonths(board.month, -1))}`}><ChevronLeft /></Link></Button>
+            <h1 className="min-w-[200px] text-center text-xl font-semibold tracking-[-0.02em] sm:min-w-[230px]">{formatMonth(board.month, lang)}</h1>
+            <Button asChild variant="ghost" size="icon" aria-label={t("Next month")}><Link href={`/?month=${monthParam(addMonths(board.month, 1))}`}><ChevronRight /></Link></Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <CountdownChip today={board.today} due={due} />
           {board.rows.length > 0 && (
-            <Button asChild variant="secondary"><Link href={`/entry?month=${monthParam(board.month)}`}><Keyboard />Enter PF/ESIC</Link></Button>
+            <Button asChild variant="secondary"><Link href={`/entry?month=${monthParam(board.month)}`}><Keyboard />{t("Enter PF/ESIC")}</Link></Button>
           )}
           <WalkInButton />
-          {board.rows.length > 0 && board.not_started > 0 && <StartMonthButton month={board.month} label={`Add ${board.not_started} new client${board.not_started > 1 ? "s" : ""}`} variant="soft" />}
+          {board.rows.length > 0 && board.not_started > 0 && <StartMonthButton month={board.month} label={t(board.not_started > 1 ? "Add {n} new clients" : "Add {n} new client", { n: board.not_started })} variant="soft" />}
         </div>
       </div>
 
@@ -62,9 +64,9 @@ export function BoardView({ board }: { board: Board }) {
         <Card className="mt-6">
           <EmptyState
             icon={CalendarPlus}
-            title={`${monthName} hasn't started yet`}
-            body={`This adds ${monthName} for your ${board.not_started} active clients, with each one's usual service charge. You can change anything afterwards.`}
-            action={board.not_started > 0 ? <StartMonthButton month={board.month} label={`Start ${monthName}`} /> : undefined}
+            title={t("{month} hasn't started yet", { month: monthName })}
+            body={t("This adds {month} for your {n} active clients, with each one's usual service charge. You can change anything afterwards.", { month: monthName, n: board.not_started })}
+            action={board.not_started > 0 ? <StartMonthButton month={board.month} label={t("Start {month}", { month: monthName })} /> : undefined}
           />
         </Card>
       ) : (
@@ -72,27 +74,27 @@ export function BoardView({ board }: { board: Board }) {
           {s.total > 0 && s.done === s.total && <MonthClosed month={board.month} handled={s.pfPaise + s.esicPaise + s.feesPaise} clients={s.total} overdue={s.overdue} />}
 
           {/* ── Summary ─────────────────────────────────────── */}
-          <section aria-label="Summary" className="mt-6 grid gap-4 lg:grid-cols-[260px_1fr]">
+          <section aria-label={t("Summary")} className="mt-6 grid gap-4 lg:grid-cols-[260px_1fr]">
             <Card className="flex flex-row items-center gap-5 p-5 lg:flex-col lg:justify-center">
               <MonthProgressRing closed={s.done} total={s.total} today={board.today} due={due} size={168} className="shrink-0" />
               <div className="lg:text-center">
-                <div className="text-sm font-semibold">{s.done === s.total ? `${monthName} is closed 🎉` : `${s.total - s.done} clients still open`}</div>
-                <div className="mt-0.5 text-xs text-ink-muted">{s.amountsPending > 0 ? `${s.amountsPending} without PF/ESIC amounts` : "All amounts entered"}</div>
+                <div className="text-sm font-semibold">{s.done === s.total ? t("{month} is closed 🎉", { month: monthName }) : t("{n} clients still open", { n: s.total - s.done })}</div>
+                <div className="mt-0.5 text-xs text-ink-muted">{s.amountsPending > 0 ? t("{n} without PF/ESIC amounts", { n: s.amountsPending }) : t("All amounts entered")}</div>
               </div>
             </Card>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              <StatCard icon={Landmark} tone="primary" label="PF + ESIC" paise={s.pfPaise + s.esicPaise} hint="Government money" />
-              <StatCard icon={BadgeIndianRupee} label="Our fees" paise={s.feesPaise} hint="Service charges + extras" />
-              <StatCard icon={Wallet} tone="success" label="Received" paise={s.collectedPaise} hint="Against this month" />
-              <StatCard icon={ShieldAlert} tone={s.pendingPaise > 0 ? "warning" : "success"} label="Owes" paise={s.pendingPaise} hint={`${s.owingClients} client${s.owingClients === 1 ? "" : "s"}`} />
-              <StatCard icon={FileCheck2} tone="success" label="Challans done" count={s.challansDone} hint={`of ${s.total}`} />
-              <StatCard icon={Send} tone={s.notNotified ? "danger" : "default"} label="Not notified" count={s.notNotified} hint={s.notNotified ? "send reminders" : "everyone told"} />
+              <StatCard icon={Landmark} tone="primary" label="PF + ESIC" paise={s.pfPaise + s.esicPaise} hint={t("Government money")} />
+              <StatCard icon={BadgeIndianRupee} label={t("Our fees")} paise={s.feesPaise} hint={t("Service charges + extras")} />
+              <StatCard icon={Wallet} tone="success" label={t("Received")} paise={s.collectedPaise} hint={t("Against this month")} />
+              <StatCard icon={ShieldAlert} tone={s.pendingPaise > 0 ? "warning" : "success"} label={t("Owes")} paise={s.pendingPaise} hint={t(s.owingClients === 1 ? "{n} client" : "{n} clients", { n: s.owingClients })} />
+              <StatCard icon={FileCheck2} tone="success" label={t("Challans done")} count={s.challansDone} hint={t("of {n}", { n: s.total })} />
+              <StatCard icon={Send} tone={s.notNotified ? "danger" : "default"} label={t("Not notified")} count={s.notNotified} hint={s.notNotified ? t("send reminders") : t("everyone told")} />
             </div>
           </section>
 
           {/* ── Toolbar ─────────────────────────────────────── */}
           <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div role="tablist" aria-label="Quick filters" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
+            <div role="tablist" aria-label={t("Quick filters")} className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
               {FILTERS.map((f) => (
                 <button
                   key={f.id}
@@ -104,14 +106,14 @@ export function BoardView({ board }: { board: Board }) {
                     filter === f.id ? "bg-primary text-primary-ink ring-primary" : "bg-surface text-ink-muted ring-hairline hover:text-ink",
                   )}
                 >
-                  {f.label}
+                  {t(f.label)}
                   <span className={cn("tabular rounded-full px-1.5 text-xs", filter === f.id ? "bg-white/20" : "bg-surface-2")}>{counts[f.id]}</span>
                 </button>
               ))}
             </div>
             <div className="relative lg:w-80">
               <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />
-              <Input aria-label="Search clients" placeholder="Search clients" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" />
+              <Input aria-label={t("Search clients")} placeholder={t("Search clients")} value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" />
             </div>
           </div>
 
@@ -120,9 +122,9 @@ export function BoardView({ board }: { board: Board }) {
             <Card className="mt-4">
               <EmptyState
                 icon={filter === "done" ? FileCheck2 : PartyPopper}
-                title={query ? `No client matches “${query}”` : filter === "done" ? "No client is done yet" : `Nothing here for ${monthName} 🎉`}
-                body={query ? "Try part of the name, the owner, or an old spelling." : filter === "done" ? "Clients appear here once paid, challan filed and receipt shared." : "Every client is past this step."}
-                action={query || filter !== "all" ? <Button variant="soft" onClick={() => { setQuery(""); setFilter("all"); }}>Show all clients</Button> : undefined}
+                title={query ? t("No client matches “{q}”", { q: query }) : filter === "done" ? t("No client is done yet") : t("Nothing here for {month} 🎉", { month: monthName })}
+                body={query ? t("Try part of the name, the owner, or an old spelling.") : filter === "done" ? t("Clients appear here once paid, challan filed and receipt shared.") : t("Every client is past this step.")}
+                action={query || filter !== "all" ? <Button variant="soft" onClick={() => { setQuery(""); setFilter("all"); }}>{t("Show all clients")}</Button> : undefined}
               />
             </Card>
           ) : (
@@ -143,6 +145,7 @@ export function BoardView({ board }: { board: Board }) {
 function StartMonthButton({ month, label, variant = "primary" }: { month: string; label: string; variant?: "primary" | "soft" }) {
   const [pending, start] = useTransition();
   const router = useRouter();
+  const { lang, t } = useLang();
   return (
     <Button
       variant={variant}
@@ -151,21 +154,22 @@ function StartMonthButton({ month, label, variant = "primary" }: { month: string
       onClick={() =>
         start(async () => {
           const r = await startMonth(month);
-          if (!r.ok) return void toast.error("Couldn't start the month", { description: r.error });
-          toast.success(r.data ? `${formatMonth(month)} started` : "Already up to date", { description: r.data ? `${r.data} clients added with their usual charge.` : undefined });
+          if (!r.ok) return void toast.error(t("Couldn't start the month"), { description: t(r.error) });
+          toast.success(r.data ? t("{month} started", { month: formatMonth(month, lang) }) : t("Already up to date"), { description: r.data ? t("{n} clients added with their usual charge.", { n: r.data }) : undefined });
           router.refresh();
         })
       }
     >
       <Plus />
-      {pending ? "Starting…" : label}
+      {pending ? t("Starting…") : label}
     </Button>
   );
 }
 
 function PartnerBadge({ code }: { code: "A" | "R" | null }) {
+  const { t } = useLang();
   if (!code) return <span className="text-xs text-ink-faint">N</span>;
-  return <Chip tone="primary" size="sm" className="h-5 px-1.5">{code === "A" ? "Alok" : "Rajeev"}</Chip>;
+  return <Chip tone="primary" size="sm" className="h-5 px-1.5">{code === "A" ? t("Alok") : t("Rajeev")}</Chip>;
 }
 
 const statusOf = (r: BoardRow): RecordStatus => r.overall_status as RecordStatus;
@@ -190,6 +194,7 @@ export function RowReminder({ row, onClose, onSent }: { row: BoardRow; onClose: 
 
 function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
   const reduce = useReducedMotion();
+  const { t } = useLang();
   const totals = summarize(rows);
   return (
     <div className="card-highlight mt-4 hidden overflow-hidden rounded-2xl bg-surface lg:block">
@@ -197,15 +202,15 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead>
             <tr className="[&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:h-10 [&>th]:border-b [&>th]:border-hairline [&>th]:bg-surface-2 [&>th]:px-4 [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wide [&>th]:whitespace-nowrap [&>th]:text-ink-muted [&>th]:uppercase">
-              <th className="left-0 z-20 text-left">Client</th>
+              <th className="left-0 z-20 text-left">{t("Client")}</th>
               <th className="text-right">PF</th>
               <th className="text-right">ESIC</th>
-              <th className="text-right">Fee</th>
-              <th className="text-right">Due to us</th>
-              <th className="text-right">Received</th>
-              <th className="text-right">Owes</th>
-              <th className="text-left">Status</th>
-              <th className="w-24"><span className="sr-only">Actions</span></th>
+              <th className="text-right">{t("Fee")}</th>
+              <th className="text-right">{t("Due to us")}</th>
+              <th className="text-right">{t("Received")}</th>
+              <th className="text-right">{t("Owes")}</th>
+              <th className="text-left">{t("Status")}</th>
+              <th className="w-24"><span className="sr-only">{t("Actions")}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -224,7 +229,7 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
                       <PartnerBadge code={r.partner_code} />
                     </span>
                     <span className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
-                      {r.owner_name ?? "Owner not added"}
+                      {r.owner_name ?? t("Owner not added")}
                       {r.challan_payer === "client" && <ClientPaysChip />}
                     </span>
                   </Link>
@@ -238,12 +243,12 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
                 <td><StatusChip status={statusOf(r)} size="sm" /></td>
                 <td className="text-right whitespace-nowrap">
                   {r.amount_status === "ENTERED" && (r.owes > 0 || r.challan_payer === "client") && r.overall_status !== "DONE" && (
-                    <Button variant="ghost" size="icon" aria-label={`Send reminder to ${r.firm_name}`} title="Send reminder" onClick={() => onRemind(r)} className="size-9">
+                    <Button variant="ghost" size="icon" aria-label={t("Send reminder to {name}", { name: r.firm_name })} title={t("Send reminder")} onClick={() => onRemind(r)} className="size-9">
                       <Send />
                     </Button>
                   )}
                   {r.owes > 0 && (
-                    <Button variant="ghost" size="icon" aria-label={`Record payment for ${r.firm_name}`} onClick={() => onPay(r.client_id)} className="size-9">
+                    <Button variant="ghost" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={() => onPay(r.client_id)} className="size-9">
                       <Wallet />
                     </Button>
                   )}
@@ -253,7 +258,7 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
           </tbody>
           <tfoot>
             <tr className="[&>td]:sticky [&>td]:bottom-0 [&>td]:h-12 [&>td]:border-t [&>td]:border-hairline-strong [&>td]:bg-surface-2 [&>td]:px-4 [&>td]:font-semibold">
-              <td className="left-0 z-20">{rows.length} clients</td>
+              <td className="left-0 z-20">{t("{n} clients", { n: rows.length })}</td>
               <td className="text-right"><Money paise={totals.pfPaise} size="sm" /></td>
               <td className="text-right"><Money paise={totals.esicPaise} size="sm" /></td>
               <td className="text-right"><Money paise={totals.feesPaise} size="sm" /></td>
@@ -271,6 +276,7 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
 
 function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
   const [hint, setHint] = useState(false);
+  const { t, lang } = useLang();
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -285,8 +291,10 @@ function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: st
     <div className="mt-4 lg:hidden">
       {hint && (
         <div className="mb-3 flex items-center gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-ink ring-1 ring-inset ring-[color-mix(in_oklab,var(--accent)_40%,transparent)]">
-          <span className="flex-1">Tip: swipe a client <strong>right</strong> to record a payment, <strong>left</strong> to send a WhatsApp reminder.</span>
-          <button onClick={seen} aria-label="Got it" className="grid size-9 place-items-center rounded-lg text-ink-muted"><X className="size-4" /></button>
+          <span className="flex-1">{lang === "hi"
+            ? <>सुझाव: भुगतान दर्ज करने के लिए ग्राहक को <strong>दाएँ</strong> खिसकाएँ, व्हाट्सऐप रिमाइंडर के लिए <strong>बाएँ</strong>।</>
+            : <>Tip: swipe a client <strong>right</strong> to record a payment, <strong>left</strong> to send a WhatsApp reminder.</>}</span>
+          <button onClick={seen} aria-label={t("Got it")} className="grid size-9 place-items-center rounded-lg text-ink-muted"><X className="size-4" /></button>
         </div>
       )}
       <Card className="overflow-hidden">
@@ -302,6 +310,7 @@ const SWIPE = 90;
 
 function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRemind: () => void }) {
   const reduce = useReducedMotion();
+  const { t } = useLang();
   const canPay = r.owes > 0;
   const canRemind = r.amount_status === "ENTERED" && r.overall_status !== "DONE" && (r.owes > 0 || r.challan_payer === "client");
   // A swipe must not also count as a tap on the client's name (which would open the client page).
@@ -319,7 +328,7 @@ function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRe
     <li className="relative">
       {/* What's under the row while swiping */}
       <div aria-hidden className="absolute inset-0 flex items-center justify-between px-5 text-sm font-semibold">
-        <span className={cn("flex items-center gap-2", canPay ? "text-success" : "text-ink-faint")}><Wallet className="size-5" />Payment</span>
+        <span className={cn("flex items-center gap-2", canPay ? "text-success" : "text-ink-faint")}><Wallet className="size-5" />{t("Payment")}</span>
         <span className={cn("flex items-center gap-2", canRemind ? "text-success" : "text-ink-faint")}>WhatsApp<MessageCircle className="size-5" /></span>
       </div>
       <motion.div
@@ -340,12 +349,12 @@ function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRe
         </Link>
         <div className="shrink-0 text-right">
           {pendingAmounts(r) ? <span className="text-sm text-ink-faint">—</span> : r.owes ? <Money paise={r.owes} size="md" tone={r.overdue ? "danger" : "default"} /> : <Money paise={r.received} size="md" tone="success" />}
-          <div className="text-xs text-ink-faint">{pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due"}</div>
+          <div className="text-xs text-ink-faint">{t(pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due")}</div>
         </div>
         {canPay ? (
-          <Button variant="soft" size="icon" aria-label={`Record payment for ${r.firm_name}`} onClick={onPay}><Wallet /></Button>
+          <Button variant="soft" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={onPay}><Wallet /></Button>
         ) : (
-          <Link href={`/clients/${r.client_id}`} aria-label={`Open ${r.firm_name}`} className="grid size-11 place-items-center text-ink-faint"><ArrowRight className="size-4" /></Link>
+          <Link href={`/clients/${r.client_id}`} aria-label={t("Open {name}", { name: r.firm_name })} className="grid size-11 place-items-center text-ink-faint"><ArrowRight className="size-4" /></Link>
         )}
       </motion.div>
     </li>
@@ -366,7 +375,8 @@ function MonthClosed({ month, handled, clients, overdue }: { month: string; hand
       }
     } catch {}
   }, [month]);
-  const name = formatMonth(month).split(" ")[0];
+  const { lang, t } = useLang();
+  const name = formatMonth(month, lang).split(" ")[0];
   return (
     <Card className="mt-6 flex items-center gap-5 overflow-hidden border border-success-line bg-success-soft p-5">
       <motion.div
@@ -379,9 +389,9 @@ function MonthClosed({ month, handled, clients, overdue }: { month: string; hand
         <BadgeCheck className="size-9 stroke-[1.75]" />
       </motion.div>
       <div>
-        <div className="text-lg font-semibold">{name} closed.</div>
+        <div className="text-lg font-semibold">{t("{month} closed.", { month: name })}</div>
         <div className="mt-0.5 text-sm text-ink-muted">
-          <Money paise={handled} size="sm" /> handled · {clients} clients · {overdue} overdue. Every client paid, challans filed and receipts shared.
+          <Money paise={handled} size="sm" /> {t("handled")} · {t("{n} clients", { n: clients })} · {t("{n} overdue", { n: overdue })}. {t("Every client paid, challans filed and receipts shared.")}
         </div>
       </div>
     </Card>

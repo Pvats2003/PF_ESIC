@@ -1,4 +1,7 @@
+"use client";
+
 import { CalendarClock, TriangleAlert } from "lucide-react";
+import { useLang } from "@/components/providers/lang-provider";
 import { countdown } from "@/lib/domain/countdown";
 import type { ISODate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
@@ -11,7 +14,7 @@ const tones = {
 };
 
 export function CountdownChip({ today, due, className }: { today: ISODate; due: ISODate; className?: string }) {
-  const c = countdown(today, due);
+  const c = countdown(today, due, useLang().lang);
   const Icon = c.tone === "overdue" ? TriangleAlert : CalendarClock;
   return (
     <span

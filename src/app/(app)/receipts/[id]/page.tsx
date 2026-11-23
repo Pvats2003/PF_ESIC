@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ChevronLeft } from "lucide-react";
 import { DetailSkeleton } from "@/components/app/page-states";
 import { ReceiptShare } from "@/components/payment/receipt-share";
+import { Tr } from "@/components/providers/lang-provider";
 
 export const metadata: Metadata = { title: "Receipt" };
 
@@ -21,8 +22,8 @@ async function ReceiptLoader({ params }: { params: PageProps<"/receipts/[id]">["
   const { id } = await params;
   return (
     <>
-      <Link href="/" className="mb-4 inline-flex h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />Back</Link>
-      <h1 className="mb-4 text-lg font-semibold">Receipt</h1>
+      <Link href="/" className="mb-4 inline-flex h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"><ChevronLeft className="size-4" /><Tr k="Back" /></Link>
+      <h1 className="mb-4 text-lg font-semibold"><Tr k="Receipt" /></h1>
       <ReceiptShare receiptId={id} allowReissue />
     </>
   );

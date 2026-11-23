@@ -3,6 +3,7 @@
 import { BarChart3, CalendarRange, Keyboard, ListTodo, Menu, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLang } from "@/components/providers/lang-provider";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
@@ -27,8 +28,9 @@ export function SidebarNav() {
 
 /** Same links without a highlight: shown for the instant before the URL is known. */
 export function SidebarLinks({ path = "" }: { path?: string }) {
+  const { t } = useLang();
   return (
-    <nav aria-label="Main" className="flex flex-col gap-1">
+    <nav aria-label={t("Main")} className="flex flex-col gap-1">
       {NAV.map(({ href, label, icon: Icon, match }) => {
         const active = match(path);
         return (
@@ -42,7 +44,7 @@ export function SidebarLinks({ path = "" }: { path?: string }) {
             )}
           >
             <Icon aria-hidden className="size-[18px] stroke-[1.75]" />
-            {label}
+            {t(label)}
           </Link>
         );
       })}
@@ -55,8 +57,9 @@ export function BottomTabs() {
 }
 
 export function BottomTabLinks({ path = "" }: { path?: string }) {
+  const { t } = useLang();
   return (
-    <nav aria-label="Main" className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/95 backdrop-blur-md lg:hidden">
+    <nav aria-label={t("Main")} className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/95 backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-md">
         {TABS.map(({ href, label, icon: Icon, match }) => {
           const active = match(path);
@@ -68,7 +71,7 @@ export function BottomTabLinks({ path = "" }: { path?: string }) {
               className={cn("flex h-16 flex-1 flex-col items-center justify-center gap-1 text-xs font-medium", active ? "text-primary-text" : "text-ink-muted")}
             >
               <Icon aria-hidden className={cn("size-[22px] stroke-[1.75]", active && "stroke-[2]")} />
-              {label}
+              {t(label)}
             </Link>
           );
         })}

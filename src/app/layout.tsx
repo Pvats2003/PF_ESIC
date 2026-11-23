@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/providers/sw-register";
+import { LangProvider } from "@/components/providers/lang-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
@@ -43,9 +44,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" suppressHydrationWarning className={`${jakarta.variable} ${devanagari.variable} h-full`}>
       <body className="min-h-full">
         <ThemeProvider>
-          {children}
-          <Toaster />
-          <ServiceWorkerRegister />
+          <LangProvider>
+            {children}
+            <Toaster />
+            <ServiceWorkerRegister />
+          </LangProvider>
         </ThemeProvider>
       </body>
     </html>

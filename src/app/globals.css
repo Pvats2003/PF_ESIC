@@ -162,7 +162,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  :lang(hi), .font-hindi {
+  /* Only elements marked Hindi (receipts, chips). When the whole screen is Hindi
+     (<html lang="hi">), --font-sans already falls back to Devanagari per glyph. */
+  [lang="hi"]:not(html), .font-hindi {
     font-family: var(--font-hindi);
     /* Devanagari needs a little more room for matras above and below */
     line-height: 1.6;

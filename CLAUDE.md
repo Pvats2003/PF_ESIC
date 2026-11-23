@@ -35,6 +35,8 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   optional pay-now + receipt), shared expenses + money between partners (Reports → Partner settlement, void with reason),
   Ctrl+K command palette (cmdk), phone swipe right = payment / left = reminder (one-time tip), month-closed card,
   client statement per FY (`/clients/[id]/statement`, hi/en, image/PDF), receipt PDF (`src/lib/export/image-pdf.ts`, pdf-lib).
+- **Hindi screens: done.** Every screen in Hindi or English, chosen per device (sidebar/phone top bar toggle, Settings,
+  More; stored in localStorage `pfesic:lang` + cookie). Receipts/messages still follow each client's language. No SQL change.
 - **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
   update 4 = 20261127, update 5 = 20261128). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
 - Reports read `live_ledger` (financial_ledger minus legacy_settled months and minus voided entries and their reversals), so imported history never distorts
@@ -131,6 +133,10 @@ data/                    real Excel + mapping CSV: gitignored, never committed
 - Phones stored as `+91XXXXXXXXXX` (`normalizeIndianPhone`). ESIC codes are 17 digits stored as **text**.
 
 **Language**
+- Screen text goes through `useLang().t("English text", { vars })` (`src/components/providers/lang-provider.tsx`); server
+  components use `<Tr k="…" />`. The English text is the key; Hindi lives in `src/lib/i18n/hi.ts`.
+  `tests/unit/i18n.test.ts` fails on any `t("…")` without Hindi, and on placeholders that don't match. Dates in screens:
+  `formatMonth(d, lang)`. Server error messages are shown as `t(r.error)`, so add new ones to `hi.ts` too.
 - Receipts and messages in Hindi or English, chosen when sending (client's `preferred_language` preselected).
 - Hindi number words come from the full 0–99 table in `words.ts`; never build them from parts.
 - Hindi text uses Noto Sans Devanagari (`font-hindi` / `lang="hi"`). Receipts are HTML → PNG (html-to-image) → PDF, never a PDF text library.

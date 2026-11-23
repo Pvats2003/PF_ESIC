@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { useLang } from "@/components/providers/lang-provider";
 import { countdown } from "@/lib/domain/countdown";
 import type { ISODate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,8 @@ export function MonthProgressRing({
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const pct = total === 0 ? 0 : Math.min(1, closed / total);
-  const c = countdown(today, due);
+  const { lang, t } = useLang();
+  const c = countdown(today, due, lang);
   const daysTone =
     c.tone === "calm" ? "text-ink" : c.tone === "soon" ? "text-accent-text" : "text-danger";
   const arcColor = pct === 1 ? "var(--success)" : "var(--primary-text)";
@@ -45,15 +47,15 @@ export function MonthProgressRing({
           {c.days < 0 ? -c.days : c.days}
         </div>
         <div className="mt-1 text-xs font-medium text-ink-muted">
-          {c.days < 0 ? "days overdue" : c.days === 1 ? "day left" : "days left"}
+          {t(c.days < 0 ? "days overdue" : c.days === 1 ? "day left" : "days left")}
         </div>
         <div className="mt-2 h-px w-10 bg-hairline-strong" />
         <div className="tabular mt-2 text-sm font-semibold text-ink">
-          {closed} <span className="font-normal text-ink-muted">of {total} closed</span>
+          {closed} <span className="font-normal text-ink-muted">{t("of {total} closed", { total })}</span>
         </div>
       </div>
       <span className="sr-only">
-        {closed} of {total} clients closed. {c.label}.
+        {t("{closed} of {total} clients closed.", { closed, total })} {c.label}.
       </span>
     </div>
   );

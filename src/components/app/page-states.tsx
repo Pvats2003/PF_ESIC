@@ -1,19 +1,24 @@
+"use client";
+
 import { DatabaseZap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLang } from "@/components/providers/lang-provider";
 
 export function NoDatabase() {
+  const { t } = useLang();
   return (
     <Card>
-      <EmptyState icon={DatabaseZap} title="No database connected" body="This demo has no data source. Sign in on the live site, or run the local database (npm run dev:db)." />
+      <EmptyState icon={DatabaseZap} title={t("No database connected")} body={t("This demo has no data source. Sign in on the live site, or run the local database (npm run dev:db).")} />
     </Card>
   );
 }
 
 export function BoardSkeleton() {
+  const { t } = useLang();
   return (
-    <div aria-busy="true" aria-label="Loading">
+    <div aria-busy="true" aria-label={t("Loading")}>
       <div className="flex items-end justify-between">
         <Skeleton className="h-12 w-72" />
         <Skeleton className="h-9 w-48 rounded-full" />
@@ -33,8 +38,9 @@ export function BoardSkeleton() {
 }
 
 export function DetailSkeleton() {
+  const { t } = useLang();
   return (
-    <div aria-busy="true" aria-label="Loading" className="space-y-4">
+    <div aria-busy="true" aria-label={t("Loading")} className="space-y-4">
       <Skeleton className="h-10 w-80" />
       <Skeleton className="h-40 rounded-2xl" />
       <Skeleton className="h-72 rounded-2xl" />

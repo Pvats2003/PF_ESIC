@@ -13,9 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { paymentMessage, toReceiptData, type ReceiptRow } from "@/lib/domain/receipt";
 import type { Lang } from "@/lib/format/dates";
 import { waMeNumber } from "@/lib/format/phone";
+import { useLang } from "@/components/providers/lang-provider";
 
 /** Receipt preview with language switch, WhatsApp share (image + message) and download. */
 export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: string; allowReissue?: boolean }) {
+  const { t } = useLang();
   const [data, setData] = useState<ReceiptRow | null>(null);
   const [error, setError] = useState<string>();
   const [lang, setLang] = useState<Lang>("hi");
@@ -83,11 +85,11 @@ export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: s
         download(file);
         const phone = data.client.whatsapp_phone ?? data.client.phone;
         window.open(`https://wa.me/${phone ? waMeNumber(phone) : ""}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
-        toast("Receipt image downloaded", { description: "Attach it in the WhatsApp chat that just opened." });
+        toast("Receipt image downloaded", { description: t("Attach it in the WhatsApp chat that just opened.") });
       }
       await logMessage({ clientId: data.client.id, type: "receipt", language: lang, body: text, status: "shared", paymentId: data.payment.id });
     } catch (e) {
-      if ((e as Error).name !== "AbortError") toast.error("Couldn't share the receipt", { description: (e as Error).message });
+      if ((e as Error).name !== "AbortError") toast.error(t("Couldn't share the receipt"), { description: (e as Error).message });
     } finally {
       setBusy(false);
     }
@@ -99,7 +101,7 @@ export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: s
         <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger ring-1 ring-danger-line ring-inset">This receipt is void: {data.receipt.void_reason}</p>
       )}
       <div className="flex items-center justify-between gap-3">
-        <Segmented ariaLabel="Receipt language" value={lang} onChange={setLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: "English" }]} />
+        <Segmented ariaLabel={t("Receipt language")} value={lang} onChange={setLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: t("English") }]} />
         <span className="tabular text-sm font-semibold text-primary-text">{data.receipt.receipt_no}</span>
       </div>
       <div ref={box} className="w-full overflow-hidden rounded-xl" style={{ height: height ? height * scale : undefined }}>
@@ -112,11 +114,11 @@ export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: s
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button variant="whatsapp" size="lg" className="flex-1" onClick={share} disabled={busy}>
           <MessageCircle />
-          {busy ? "Preparing…" : "Share on WhatsApp"}
+          {busy ? t("Preparing…") : t("Share on WhatsApp")}
         </Button>
         <Button variant="secondary" size="lg" onClick={async () => download(await makeFile())}>
           <Download />
-          Image
+          {t("Image")}
         </Button>
         <Button variant="secondary" size="lg" onClick={async () => downloadBlob(await pngToPdf(await makeFile()), fileName.replace(/\.png$/, ".pdf"))}>
           <FileDown />

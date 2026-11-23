@@ -12,6 +12,7 @@ import { Input, Label, MoneyInput } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
 import { formatINR, parseRupeesToPaise } from "@/lib/format/money";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/components/providers/lang-provider";
 
 const SERVICES = [
   { value: "pf_claim", label: "PF claim", price: "200" },
@@ -23,6 +24,7 @@ type Service = (typeof SERVICES)[number]["value"];
 
 /** One-off work for anyone (PF claim, registration…), under 15 seconds, with a receipt if paid now. */
 export function WalkInSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { t } = useLang();
   const router = useRouter();
   const key = useRef(crypto.randomUUID());
   const [pending, start] = useTransition();
@@ -37,16 +39,16 @@ export function WalkInSheet({ open, onOpenChange }: { open: boolean; onOpenChang
 
   function submit() {
     const amount = parseRupeesToPaise(f.amount);
-    if (!amount) return toast.error("Enter the amount");
+    if (!amount) return toast.error(t("Enter the amount"));
     start(async () => {
       const r = await recordWalkIn({
         name: f.name, phone: f.phone, service_type: f.service, description: f.description, amount_paise: amount,
         partner_code: f.partner, paid_now: f.paid, mode: f.mode, language: "hi", idempotency_key: key.current,
       });
-      if (!r.ok) return void toast.error("Not saved", { description: r.error });
+      if (!r.ok) return void toast.error(t("Not saved"), { description: t(r.error) });
       if (r.data.payment) setDone(r.data);
       else {
-        toast.success(`${formatINR(amount)} work recorded`, { description: `${f.name} now owes it.` });
+        toast.success(t("{amount} work recorded", { amount: formatINR(amount) }), { description: t("{name} now owes it.", { name: f.name }) });
         onOpenChange(false);
       }
       router.refresh();
@@ -57,11 +59,11 @@ export function WalkInSheet({ open, onOpenChange }: { open: boolean; onOpenChang
     <BottomSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={done ? "Walk-in work saved" : "Walk-in work"}
-      description={done ? f.name : "PF claim, registration, letters… for anyone"}
+      title={done ? t("Walk-in work saved") : t("Walk-in work")}
+      description={done ? f.name : t("PF claim, registration, letters… for anyone")}
       footer={done ? undefined : (
         <Button size="lg" block disabled={pending || !f.name.trim()} onClick={submit}>
-          <Check />{pending ? "Saving…" : f.paid ? `Save and issue receipt` : "Save (not paid yet)"}
+          <Check />{pending ? t("Saving…") : f.paid ? t("Save and issue receipt") : t("Save (not paid yet)")}
         </Button>
       )}
     >
@@ -70,30 +72,30 @@ export function WalkInSheet({ open, onOpenChange }: { open: boolean; onOpenChang
       ) : (
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 sm:col-span-1"><Label htmlFor="w-name">Name</Label><Input id="w-name" value={f.name} onChange={(e) => set("name", e.target.value)} autoFocus placeholder="Person or firm" /></div>
-            <div className="col-span-2 sm:col-span-1"><Label htmlFor="w-phone">Phone (optional)</Label><Input id="w-phone" inputMode="tel" value={f.phone} onChange={(e) => set("phone", e.target.value)} /></div>
+            <div className="col-span-2 sm:col-span-1"><Label htmlFor="w-name">{t("Name")}</Label><Input id="w-name" value={f.name} onChange={(e) => set("name", e.target.value)} autoFocus placeholder={t("Person or firm")} /></div>
+            <div className="col-span-2 sm:col-span-1"><Label htmlFor="w-phone">{t("Phone (optional)")}</Label><Input id="w-phone" inputMode="tel" value={f.phone} onChange={(e) => set("phone", e.target.value)} /></div>
           </div>
           <div>
-            <Label>Work</Label>
+            <Label>{t("Work")}</Label>
             <div className="flex flex-wrap gap-1.5">
               {SERVICES.map((s) => (
                 <button key={s.value} type="button" onClick={() => pickService(s.value)} aria-pressed={f.service === s.value}
                   className={cn("h-10 rounded-full px-3.5 text-sm font-medium ring-1 ring-inset", f.service === s.value ? "bg-primary text-primary-ink ring-primary" : "bg-surface text-ink-muted ring-hairline")}>
-                  {s.label}
+                  {t(s.label)}
                 </button>
               ))}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label htmlFor="w-amt">Amount</Label><MoneyInput id="w-amt" value={f.amount} onChange={(e) => set("amount", e.target.value)} /></div>
-            <div><Label>Done by</Label><Segmented ariaLabel="Done by" value={f.partner} onChange={(v) => set("partner", v)} options={[{ value: "A", label: "Alok" }, { value: "R", label: "Rajeev" }]} /></div>
+            <div><Label htmlFor="w-amt">{t("Amount")}</Label><MoneyInput id="w-amt" value={f.amount} onChange={(e) => set("amount", e.target.value)} /></div>
+            <div><Label>{t("Done by")}</Label><Segmented ariaLabel={t("Done by")} value={f.partner} onChange={(v) => set("partner", v)} options={[{ value: "A", label: t("Alok") }, { value: "R", label: t("Rajeev") }]} /></div>
           </div>
-          <div><Label htmlFor="w-desc">Note (optional)</Label><Input id="w-desc" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="e.g. Form 19, Ino Construction employee" /></div>
+          <div><Label htmlFor="w-desc">{t("Note (optional)")}</Label><Input id="w-desc" value={f.description} onChange={(e) => set("description", e.target.value)} placeholder={t("e.g. Form 19, Ino Construction employee")} /></div>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium">
             <input type="checkbox" className="size-5 accent-[var(--primary)]" checked={f.paid} onChange={(e) => set("paid", e.target.checked)} />
-            Paid now
+            {t("Paid now")}
           </label>
-          {f.paid && <Segmented ariaLabel="Mode" value={f.mode} onChange={(v) => set("mode", v)} options={[{ value: "cash", label: "Cash" }, { value: "upi", label: "UPI" }, { value: "bank", label: "Bank" }]} />}
+          {f.paid && <Segmented ariaLabel={t("Mode")} value={f.mode} onChange={(v) => set("mode", v)} options={[{ value: "cash", label: t("Cash") }, { value: "upi", label: "UPI" }, { value: "bank", label: t("Bank") }]} />}
         </form>
       )}
     </BottomSheet>
@@ -101,10 +103,11 @@ export function WalkInSheet({ open, onOpenChange }: { open: boolean; onOpenChang
 }
 
 export function WalkInButton({ variant = "secondary" }: { variant?: "secondary" | "soft" | "primary" }) {
+  const { t } = useLang();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant={variant} onClick={() => setOpen(true)}><UserRoundPlus />Walk-in work</Button>
+      <Button variant={variant} onClick={() => setOpen(true)}><UserRoundPlus />{t("Walk-in work")}</Button>
       {open && <WalkInSheet open={open} onOpenChange={setOpen} />}
     </>
   );

@@ -17,14 +17,14 @@ test.describe("desktop", () => {
   test("settings: edit a message template and see the preview", async ({ page }) => {
     await signIn(page);
     await page.goto("/settings");
-    await page.getByRole("radio", { name: "English" }).click();
+    await page.getByRole("radiogroup", { name: "Language", exact: true }).getByRole("radio", { name: "English" }).click();
     const box = page.getByLabel("Overdue, polite");
     await box.fill("Dear {owner_name}, {firm_name} owes ₹{balance}. {business_name}");
     await expect(page.getByText("Dear Ramesh, UTTAM ENGINEERING owes ₹14,741. Rajeev Kumar Mishra")).toBeVisible();
     await box.locator("xpath=..").getByRole("button", { name: "Save message" }).click();
     await expect(page.getByText("Message saved")).toBeVisible();
     await page.reload();
-    await page.getByRole("radio", { name: "English" }).click();
+    await page.getByRole("radiogroup", { name: "Language", exact: true }).getByRole("radio", { name: "English" }).click();
     await expect(page.getByLabel("Overdue, polite")).toHaveValue(/owes ₹\{balance\}/);
   });
 

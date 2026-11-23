@@ -1,5 +1,8 @@
+"use client";
+
 import { Ban, CircleCheck, CircleDashed, CircleDot, Clock3, FileCheck2, FileSearch, Landmark, PencilLine, RotateCcw, Send, Share2, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useLang } from "@/components/providers/lang-provider";
 import { cn } from "@/lib/utils";
 
 export type Tone = "success" | "warning" | "danger" | "neutral" | "info" | "primary";
@@ -56,7 +59,10 @@ export function Chip({
   );
 }
 
-export function StatusChip({ status, lang = "en", size }: { status: RecordStatus; lang?: "en" | "hi"; size?: "sm" | "md" }) {
+/** Follows the screen language unless `lang` is given (receipts fix their own language). */
+export function StatusChip({ status, lang: fixed, size }: { status: RecordStatus; lang?: "en" | "hi"; size?: "sm" | "md" }) {
+  const screen = useLang().lang;
+  const lang = fixed ?? screen;
   const m = STATUS_META[status];
   return (
     <Chip tone={m.tone} icon={m.icon} size={size} className={lang === "hi" ? "font-hindi" : undefined}>
@@ -67,9 +73,10 @@ export function StatusChip({ status, lang = "en", size }: { status: RecordStatus
 
 /** "Client pays challan" marker — sky blue, as the brief asks. */
 export function ClientPaysChip() {
+  const { t } = useLang();
   return (
     <Chip tone="info" icon={Landmark} size="sm">
-      Client pays challan
+      {t("Client pays challan")}
     </Chip>
   );
 }

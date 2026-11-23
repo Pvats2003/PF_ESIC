@@ -6,11 +6,13 @@ import type { ClientDetail } from "@/app/(app)/actions";
 import { ChallanSheet, VerifyChallanSheet, type ChallanInfo, type ChallanMonth } from "@/components/challan/challan-sheet";
 import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { Button } from "@/components/ui/button";
+import { useLang } from "@/components/providers/lang-provider";
 
 type Month = ClientDetail["months"][number];
 
 /** Per-month actions on the client page: send reminder, add/correct challan, confirm a client's proof. */
 export function MonthActions({ month, client, partners }: { month: Month; client: ClientDetail["client"]; partners: ClientDetail["partners"] }) {
+  const { t } = useLang();
   const [sheet, setSheet] = useState<"remind" | "challan" | null>(null);
   const [verifying, setVerifying] = useState<ChallanInfo | null>(null);
   if (month.legacy_settled) return null;
@@ -25,9 +27,9 @@ export function MonthActions({ month, client, partners }: { month: Month; client
       {unverified.map((c) => (
         <Button key={c.id} variant="soft" size="sm" onClick={() => setVerifying(c)}><ShieldCheck />Confirm {c.type.toUpperCase()}</Button>
       ))}
-      {entered && <Button variant="ghost" size="icon" className="size-9" aria-label="Add or correct challan" title="Challan" onClick={() => setSheet("challan")}><FileCheck2 /></Button>}
+      {entered && <Button variant="ghost" size="icon" className="size-9" aria-label={t("Add or correct challan")} title={t("Challan")} onClick={() => setSheet("challan")}><FileCheck2 /></Button>}
       {entered && (month.owes > 0 || month.challan_payer === "client") && (
-        <Button variant="ghost" size="icon" className="size-9" aria-label="Send reminder" title="Send reminder" onClick={() => setSheet("remind")}><Send /></Button>
+        <Button variant="ghost" size="icon" className="size-9" aria-label={t("Send reminder")} title={t("Send reminder")} onClick={() => setSheet("remind")}><Send /></Button>
       )}
       {sheet === "challan" && <ChallanSheet month={cm} partners={partners} open onOpenChange={(o) => !o && setSheet(null)} initialType={month.pf_challan_status === "PENDING" ? "pf" : "esic"} />}
       {sheet === "remind" && (

@@ -16,10 +16,12 @@ import { formatMonth, todayIST } from "@/lib/format/dates";
 import { formatINR, parseRupeesToPaise } from "@/lib/format/money";
 import { cn } from "@/lib/utils";
 import { ReceiptShare } from "./receipt-share";
+import { useLang } from "@/components/providers/lang-provider";
 
 const rupeesText = (p: number) => (p % 100 === 0 ? String(p / 100) : (p / 100).toFixed(2));
 
 export function RecordPaymentSheet({ clientId, open, onOpenChange }: { clientId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { t } = useLang();
   const [detail, setDetail] = useState<ClientDetail | null>(null);
   const [error, setError] = useState<string>();
   const [done, setDone] = useState<PaymentResult | null>(null);
@@ -33,13 +35,13 @@ export function RecordPaymentSheet({ clientId, open, onOpenChange }: { clientId:
     };
   }, [clientId, open]);
 
-  const title = done ? "Payment recorded" : "Record payment";
-  const description = detail ? detail.client.firm_name : "Loading…";
+  const title = done ? t("Payment recorded") : t("Record payment");
+  const description = detail ? detail.client.firm_name : t("Loading…");
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} title={title} description={description}>
       {error ? (
-        <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>
+        <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{t(error)}</p>
       ) : !detail ? (
         <div className="space-y-4" aria-hidden>
           <Skeleton className="h-14 w-full rounded-xl" />
@@ -56,6 +58,7 @@ export function RecordPaymentSheet({ clientId, open, onOpenChange }: { clientId:
 }
 
 function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: PaymentResult) => void }) {
+  const { t, lang } = useLang();
   const router = useRouter();
   const key = useRef(crypto.randomUUID()); // one key per sheet: a double tap can't save twice
   const [pending, start] = useTransition();
@@ -88,16 +91,16 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
   }
 
   function submit() {
-    if (amountPaise === null || amountPaise <= 0) return toast.error("Enter the amount received");
-    if (!receivedBy) return toast.error("Choose who received the money");
-    if (detail.open_months.length && months.length === 0) return toast.error("Choose at least one month, or keep it all as advance");
+    if (amountPaise === null || amountPaise <= 0) return toast.error(t("Enter the amount received"));
+    if (!receivedBy) return toast.error(t("Choose who received the money"));
+    if (detail.open_months.length && months.length === 0) return toast.error(t("Choose at least one month, or keep it all as advance"));
     start(async () => {
       const r = await recordPayment({
         idempotencyKey: key.current, clientId: detail.client.id, amountPaise, receivedOn, mode, receivedBy,
         language: detail.client.preferred_language, reference: reference || undefined,
         months: months.length === detail.open_months.length ? null : months, useAdvance,
       });
-      if (!r.ok) return void toast.error("Payment not saved", { description: r.error });
+      if (!r.ok) return void toast.error(t("Payment not saved"), { description: t(r.error) });
       if ("vibrate" in navigator) navigator.vibrate?.(15);
       onDone(r.data);
       router.refresh();
@@ -114,11 +117,11 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
     >
       <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-2 p-3 text-sm">
         <div>
-          <div className="text-ink-muted">Owes</div>
+          <div className="text-ink-muted">{t("Owes")}</div>
           <Money paise={owes} size="lg" tone={owes ? "warning" : "success"} />
         </div>
         <div>
-          <div className="text-ink-muted">Advance</div>
+          <div className="text-ink-muted">{t("Advance")}</div>
           <Money paise={advance} size="lg" tone={advance ? "primary" : "muted"} />
         </div>
       </div>
@@ -134,10 +137,10 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
       )}
 
       <div>
-        <Label htmlFor="pay-amount">Amount received now</Label>
+        <Label htmlFor="pay-amount">{t("Amount received now")}</Label>
         <MoneyInput id="pay-amount" fieldSize="lg" value={amount} onChange={(e) => { setAmount(e.target.value); setTouched(true); }} aria-invalid={amount !== "" && amountPaise === null} autoFocus />
         {amount !== "" && amountPaise === null ? (
-          <FieldHint error>Enter an amount like 1,500 or 1500.50</FieldHint>
+          <FieldHint error>{t("Enter an amount like 1,500 or 1500.50")}</FieldHint>
         ) : extra > 0 ? (
           <FieldHint>{formatINR(extra)} more than the chosen months owe: it will be kept as advance.</FieldHint>
         ) : amountPaise !== null && amountPaise < coverable ? (
@@ -147,26 +150,26 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Mode</Label>
-          <Segmented ariaLabel="Payment mode" value={mode} onChange={setMode} options={[{ value: "cash", label: "Cash" }, { value: "upi", label: "UPI" }, { value: "bank", label: "Bank" }]} />
+          <Label>{t("Mode")}</Label>
+          <Segmented ariaLabel={t("Payment mode")} value={mode} onChange={setMode} options={[{ value: "cash", label: t("Cash") }, { value: "upi", label: "UPI" }, { value: "bank", label: t("Bank") }]} />
         </div>
         <div>
-          <Label>Received by</Label>
-          <Segmented ariaLabel="Received by" value={receivedBy} onChange={setReceivedBy} options={detail.partners.map((p) => ({ value: p.id, label: p.name }))} />
+          <Label>{t("Received by")}</Label>
+          <Segmented ariaLabel={t("Received by")} value={receivedBy} onChange={setReceivedBy} options={detail.partners.map((p) => ({ value: p.id, label: t(p.name) }))} />
         </div>
         <div>
-          <Label htmlFor="pay-date">Date</Label>
+          <Label htmlFor="pay-date">{t("Date")}</Label>
           <Input id="pay-date" type="date" value={receivedOn} max={todayIST()} onChange={(e) => setReceivedOn(e.target.value)} />
         </div>
         <div>
-          <Label htmlFor="pay-ref">{mode === "cash" ? "Note (optional)" : "UPI / bank reference"}</Label>
+          <Label htmlFor="pay-ref">{mode === "cash" ? t("Note (optional)") : t("UPI / bank reference")}</Label>
           <Input id="pay-ref" value={reference} maxLength={80} onChange={(e) => setReference(e.target.value)} placeholder={mode === "upi" ? "e.g. 634512987321" : ""} />
         </div>
       </div>
 
       {detail.open_months.length > 1 && (
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-ink-muted">Covers (oldest first)</legend>
+          <legend className="mb-1.5 text-sm font-medium text-ink-muted">{t("Covers (oldest first)")}</legend>
           <div className="divide-y divide-hairline rounded-xl ring-1 ring-hairline ring-inset">
             {detail.open_months.map((m) => (
               <label key={m.monthly_record_id} className="flex min-h-11 cursor-pointer items-center gap-3 px-3">
@@ -176,7 +179,7 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
                   checked={months.includes(m.monthly_record_id)}
                   onChange={(e) => setMonths((xs) => (e.target.checked ? [...xs, m.monthly_record_id] : xs.filter((x) => x !== m.monthly_record_id)))}
                 />
-                <span className="flex-1 text-sm font-medium">{formatMonth(m.wage_month)}</span>
+                <span className="flex-1 text-sm font-medium">{formatMonth(m.wage_month, lang)}</span>
                 <Money paise={m.owes} size="sm" />
               </label>
             ))}
@@ -186,13 +189,14 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
 
       <Button type="submit" size="lg" block disabled={pending || amountPaise === null || amountPaise <= 0}>
         <Check />
-        {pending ? "Saving…" : amountPaise ? `Save ${formatINR(amountPaise)} and issue receipt` : "Save and issue receipt"}
+        {pending ? t("Saving…") : amountPaise ? t("Save {amount} and issue receipt", { amount: formatINR(amountPaise) }) : t("Save and issue receipt")}
       </Button>
     </form>
   );
 }
 
 function Success({ result }: { result: PaymentResult }) {
+  const { t } = useLang();
   const reduce = useReducedMotion();
   return (
     <div className="space-y-5">
@@ -209,10 +213,10 @@ function Success({ result }: { result: PaymentResult }) {
           </svg>
         </motion.span>
         <div>
-          <div className="font-semibold">{result.duplicate ? "Already saved" : "Saved"} · receipt {result.receipt_no}</div>
+          <div className="font-semibold">{result.duplicate ? t("Already saved") : t("Saved")} · {t("receipt")} {result.receipt_no}</div>
           <div className="text-sm text-ink-muted">
-            {result.advance_used_paise > 0 && `${formatINR(result.advance_used_paise)} advance used. `}
-            {result.advance_added_paise > 0 ? `${formatINR(result.advance_added_paise)} kept as advance.` : "Applied to the oldest dues first."}
+            {result.advance_used_paise > 0 && `${t("{amount} advance used.", { amount: formatINR(result.advance_used_paise) })} `}
+            {result.advance_added_paise > 0 ? t("{amount} kept as advance.", { amount: formatINR(result.advance_added_paise) }) : t("Applied to the oldest dues first.")}
           </div>
         </div>
       </div>
@@ -225,9 +229,10 @@ function Success({ result }: { result: PaymentResult }) {
 
 export function RecordPaymentButton({ clientId, label = "Record payment" }: { clientId: string; label?: string }) {
   const [open, setOpen] = useState(false);
+  const { t } = useLang();
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Wallet />{label}</Button>
+      <Button onClick={() => setOpen(true)}><Wallet />{t(label)}</Button>
       {open && <RecordPaymentSheet clientId={clientId} open={open} onOpenChange={setOpen} />}
     </>
   );

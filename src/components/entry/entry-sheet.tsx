@@ -4,6 +4,7 @@ import { Check, ChevronLeft, CircleAlert, Keyboard, Loader2 } from "lucide-react
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { saveAmounts } from "@/app/(app)/actions";
+import { useLang } from "@/components/providers/lang-provider";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
@@ -30,6 +31,7 @@ export function EntrySheet({ board }: { board: Board }) {
     Object.fromEntries(board.rows.map((r) => [r.monthly_record_id, { pf: r.pf_paise, esic: r.esic_paise }])),
   );
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const { t, lang } = useLang();
 
   const rows = board.rows;
   const totals = useMemo(() => {
@@ -84,7 +86,7 @@ export function EntrySheet({ board }: { board: Board }) {
           ref={(el) => { inputs.current[refKey(big ? "m" : "d", id, field)] = el; }}
           inputMode="decimal"
           autoComplete="off"
-          aria-label={`${field.toUpperCase()} for ${r.firm_name}`}
+          aria-label={t("{field} for {name}", { field: field.toUpperCase(), name: r.firm_name })}
           aria-invalid={st === "error"}
           value={values[id][field]}
           onChange={(e) => setValues((v) => ({ ...v, [id]: { ...v[id], [field]: e.target.value } }))}
@@ -106,30 +108,31 @@ export function EntrySheet({ board }: { board: Board }) {
   function status(id: string) {
     const st = state[id];
     if (!st || st.s === "idle") return null;
-    if (st.s === "saving") return <Loader2 aria-label="Saving" className="size-4 animate-spin text-ink-faint" />;
-    if (st.s === "saved") return <Check aria-label="Saved" className="size-4 stroke-[2.5] text-success" />;
-    return <span title={st.msg}><CircleAlert aria-label={st.msg} className="size-4 text-danger" /></span>;
+    if (st.s === "saving") return <Loader2 aria-label={t("Saving")} className="size-4 animate-spin text-ink-faint" />;
+    if (st.s === "saved") return <Check aria-label={t("Saved")} className="size-4 stroke-[2.5] text-success" />;
+    const msg = st.msg ? t(st.msg) : undefined;
+    return <span title={msg}><CircleAlert aria-label={msg} className="size-4 text-danger" /></span>;
   }
 
   const monthQ = board.month.slice(0, 7);
   return (
     <div>
-      <Link href={`/?month=${monthQ}`} className="inline-flex h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />{formatMonth(board.month)}</Link>
+      <Link href={`/?month=${monthQ}`} className="inline-flex h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />{formatMonth(board.month, lang)}</Link>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-[-0.02em]">Enter PF and ESIC</h1>
-          <p className="mt-1 hidden items-center gap-1.5 text-sm text-ink-muted lg:flex"><Keyboard className="size-4" />Tab moves across, Enter moves down. Everything saves as you go.</p>
-          <p className="mt-1 text-sm text-ink-muted lg:hidden">Each amount saves when you move to the next box.</p>
+          <h1 className="text-xl font-semibold tracking-[-0.02em]">{t("Enter PF and ESIC")}</h1>
+          <p className="mt-1 hidden items-center gap-1.5 text-sm text-ink-muted lg:flex"><Keyboard className="size-4" />{t("Tab moves across, Enter moves down. Everything saves as you go.")}</p>
+          <p className="mt-1 text-sm text-ink-muted lg:hidden">{t("Each amount saves when you move to the next box.")}</p>
         </div>
         <div className="flex gap-6 text-right">
           <div><div className="text-xs text-ink-muted uppercase">PF</div><Money paise={totals.pf} size="lg" /></div>
           <div><div className="text-xs text-ink-muted uppercase">ESIC</div><Money paise={totals.esic} size="lg" /></div>
-          <div><div className="text-xs text-ink-muted uppercase">Entered</div><span className="tabular text-lg font-semibold">{totals.done}<span className="text-ink-faint">/{rows.length}</span></span></div>
+          <div><div className="text-xs text-ink-muted uppercase">{t("Entered")}</div><span className="tabular text-lg font-semibold">{totals.done}<span className="text-ink-faint">/{rows.length}</span></span></div>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <Card className="mt-6"><EmptyState icon={Keyboard} title={`${formatMonth(board.month)} hasn't started`} body="Start the month on the This month page first." /></Card>
+        <Card className="mt-6"><EmptyState icon={Keyboard} title={t("{month} hasn't started", { month: formatMonth(board.month, lang) })} body={t("Start the month on the This month page first.")} /></Card>
       ) : (
         <>
           {/* Desktop: one dense sheet */}
@@ -138,11 +141,11 @@ export function EntrySheet({ board }: { board: Board }) {
               <thead>
                 <tr className="[&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:h-10 [&>th]:border-b [&>th]:border-hairline [&>th]:bg-surface-2 [&>th]:px-4 [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wide [&>th]:text-ink-muted [&>th]:uppercase">
                   <th className="w-12 text-left">#</th>
-                  <th className="text-left">Client</th>
+                  <th className="text-left">{t("Client")}</th>
                   <th className="w-48 text-right">PF</th>
                   <th className="w-48 text-right">ESIC</th>
                   <th className="w-36 text-right">PF + ESIC</th>
-                  <th className="w-10"><span className="sr-only">Saved</span></th>
+                  <th className="w-10"><span className="sr-only">{t("Saved")}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -155,7 +158,7 @@ export function EntrySheet({ board }: { board: Board }) {
                       <td>
                         <span className="font-medium">{r.firm_name}</span>
                         {r.challan_payer === "client" && <span className="ml-2 align-middle"><ClientPaysChip /></span>}
-                        {state[r.monthly_record_id]?.s === "error" && <span className="block text-xs text-danger">{state[r.monthly_record_id]?.msg}</span>}
+                        {state[r.monthly_record_id]?.s === "error" && <span className="block text-xs text-danger">{t(state[r.monthly_record_id]?.msg ?? "")}</span>}
                       </td>
                       <td>{cell(r, i, "pf")}</td>
                       <td>{cell(r, i, "esic")}</td>
@@ -180,7 +183,7 @@ export function EntrySheet({ board }: { board: Board }) {
                   <label className="text-xs font-medium text-ink-muted">PF{cell(r, i, "pf", true)}</label>
                   <label className="text-xs font-medium text-ink-muted">ESIC{cell(r, i, "esic", true)}</label>
                 </div>
-                {state[r.monthly_record_id]?.s === "error" && <p className="mt-2 text-xs text-danger">{state[r.monthly_record_id]?.msg}</p>}
+                {state[r.monthly_record_id]?.s === "error" && <p className="mt-2 text-xs text-danger">{t(state[r.monthly_record_id]?.msg ?? "")}</p>}
               </Card>
             ))}
           </div>

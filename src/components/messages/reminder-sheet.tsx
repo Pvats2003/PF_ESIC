@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { buildMessage, reminderKind, type MessageKey, type MessageSetup, type MonthFigures } from "@/lib/domain/messages";
 import { formatMonth, type Lang } from "@/lib/format/dates";
 import { waMeNumber } from "@/lib/format/phone";
+import { useLang } from "@/components/providers/lang-provider";
 
 let setupCache: MessageSetup | null = null;
 
@@ -35,6 +36,7 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
   onOpenChange: (o: boolean) => void;
   onSent?: () => void;
 }) {
+  const { t } = useLang();
   const router = useRouter();
   const key = kind ?? reminderKind(figures);
   const [setup, setSetup] = useState<MessageSetup | null>(setupCache);
@@ -44,12 +46,12 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
   useEffect(() => {
     if (setup) return;
     getMessageSetup().then((r) => {
-      if (!r.ok) return toast.error("Couldn't load message templates", { description: r.error });
+      if (!r.ok) return toast.error(t("Couldn't load message templates"), { description: t(r.error) });
       setupCache = r.data;
       setSetup(r.data);
       setText(buildMessage(key, figures, r.data, lang));
     });
-  }, [setup, key, figures, lang]);
+  }, [setup, key, figures, lang, t]);
 
   function changeLang(l: Lang) {
     setLang(l);
@@ -67,13 +69,13 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
         shared = true;
       }
     } catch (e) {
-      if ((e as Error).name !== "AbortError") toast.error("Couldn't open WhatsApp");
+      if ((e as Error).name !== "AbortError") toast.error(t("Couldn't open WhatsApp"));
     }
     if (!shared) return;
     // Logged as "shared": we handed it to WhatsApp. Delivery can't be known without the WhatsApp API.
     const r = await logMessage({ clientId, type: key, language: lang, body: text, status: "shared", monthlyRecordId });
-    if (!r.ok) toast.error("Sent, but not logged", { description: r.error });
-    else toast.success("Message handed to WhatsApp", { description: "Marked as notified." });
+    if (!r.ok) toast.error(t("Sent, but not logged"), { description: t(r.error) });
+    else toast.success(t("Message handed to WhatsApp"), { description: t("Marked as notified.") });
     onOpenChange(false);
     onSent?.();
     router.refresh();
@@ -83,25 +85,25 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
     <BottomSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={TITLES[key]}
-      description={`${figures.firm_name} · ${formatMonth(figures.wage_month)}`}
+      title={t(TITLES[key])}
+      description={`${figures.firm_name} · ${formatMonth(figures.wage_month, lang)}`}
       footer={
         <div className="flex gap-2">
-          <Button variant="whatsapp" size="lg" className="flex-1" disabled={!text} onClick={send}><MessageCircle />Send on WhatsApp</Button>
-          <Button variant="secondary" size="lg" aria-label="Copy message" disabled={!text} onClick={async () => { await navigator.clipboard.writeText(text); toast("Copied"); }}><Copy /></Button>
+          <Button variant="whatsapp" size="lg" className="flex-1" disabled={!text} onClick={send}><MessageCircle />{t("Send on WhatsApp")}</Button>
+          <Button variant="secondary" size="lg" aria-label={t("Copy message")} disabled={!text} onClick={async () => { await navigator.clipboard.writeText(text); toast("Copied"); }}><Copy /></Button>
         </div>
       }
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <Segmented ariaLabel="Language" value={lang} onChange={changeLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: "English" }]} />
+          <Segmented ariaLabel={t("Language")} value={lang} onChange={changeLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: t("English") }]} />
           {!phone && <span className="text-xs text-warning">No phone saved: you&apos;ll pick the chat</span>}
         </div>
         {!setup ? (
           <Skeleton className="h-56 w-full rounded-xl" />
         ) : (
           <textarea
-            aria-label="Message"
+            aria-label={t("Message")}
             lang={lang}
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -109,7 +111,7 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
             className="w-full resize-y rounded-xl border border-hairline-strong bg-surface-2 p-3.5 text-base leading-relaxed outline-none focus:border-ring"
           />
         )}
-        <p className="text-xs text-ink-faint">You can edit the message before sending.</p>
+        <p className="text-xs text-ink-faint">{t("You can edit the message before sending.")}</p>
       </div>
     </BottomSheet>
   );

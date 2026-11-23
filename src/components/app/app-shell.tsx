@@ -1,10 +1,10 @@
-import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/logo";
-import { Button } from "@/components/ui/button";
 import { CommandPalette, SearchButton } from "./command-palette";
 import { Suspense } from "react";
 import { BottomTabLinks, BottomTabs, SidebarLinks, SidebarNav } from "./nav";
+import { LanguageToggle } from "./language-toggle";
+import { SignOutButton } from "./sign-out";
 import { ThemeToggle } from "./theme-toggle";
 
 /** Desktop: collapsible-width sidebar. Phone: top bar + bottom tabs. */
@@ -24,10 +24,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarNav />
         </Suspense>
         <div className="mt-auto flex items-center justify-between border-t border-hairline pt-4">
-          <ThemeToggle />
-          <form action="/auth/signout" method="post">
-            <Button variant="ghost" size="sm" type="submit"><LogOut />Sign out</Button>
-          </form>
+          <div className="flex items-center"><ThemeToggle /><LanguageToggle short /></div>
+          <SignOutButton />
         </div>
       </aside>
 
@@ -37,10 +35,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-base font-semibold">PF ESIC Desk</span>
         </Link>
         <div className="flex items-center">
+          <LanguageToggle />
           <ThemeToggle />
-          <form action="/auth/signout" method="post">
-            <Button variant="ghost" size="icon" type="submit" aria-label="Sign out"><LogOut /></Button>
-          </form>
+          <SignOutButton compact />
         </div>
       </header>
 
