@@ -24,9 +24,18 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
 - **Phase 2 slice 2: done.** Add/edit clients (phones normalised, ESIC 17 digits + "checked" tick), challans (record /
   correct by replace with reason / upload proof ≤ 4 MB / confirm client proof), WhatsApp reminders (template-built,
   editable, Hindi/English, logged as shared), Today's queue (`/queue`: overdue → reminders → challans to file → proof →
-  receipts, one at a time). Next: settings (business profile, templates, split), reports (reconciliation, settlement,
-  receipt registers, Excel export), command palette, swipe actions, month-closed moment, void/reissue UI.
-- **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126).
+  receipts, one at a time).
+- **Phase 2 slice 3: done.** Settings (`/settings`: business profile en/hi, phones, due day, reminder days, the 5 message
+  templates × 2 languages with live preview, dated partner split). Reports (`/reports?tab=&from=YYYY-MM&to=YYYY-MM`):
+  reconciliation (received / PF+ESIC / deposited / still to deposit / earned / owes; tabs partner, client, month, PF,
+  ESIC, mode; mismatch list), partner settlement ("Rajeev → Alok ₹X", `src/lib/domain/settlement.ts`), receipt register
+  (valid + void), Excel export (`/reports/export`, old sheet layout + PAYMENTS). Void payment and reissue receipt in the UI.
+  Phone nav: This month · Today · Clients · Reports · More. Next: command palette, swipe actions, month-closed moment,
+  expenses + partner transfers entry, walk-in quick service, client yearly statement PDF.
+- **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
+  update 4 = 20261127). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
+- Reports read `live_ledger` (financial_ledger minus legacy_settled months), so imported history never distorts
+  "government money held".
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 
 ## Commands

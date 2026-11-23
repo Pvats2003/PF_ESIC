@@ -269,3 +269,68 @@ export async function verifyChallanWithProof(form: FormData): Promise<ActionResu
     return true as const;
   });
 }
+
+// ─── Slice 3: settings, corrections ─────────────────────────────────────────
+const settingsSchema = z.object({
+  business_name_en: z.string().trim().min(1, "Business name is needed").max(120),
+  business_name_hi: z.string().trim().max(120),
+  address_en: z.string().trim().max(300),
+  address_hi: z.string().trim().max(300),
+  phones: z.array(z.string()).max(4).transform((xs, ctx) =>
+    xs.filter((x) => x.trim()).map((x) => {
+      const n = normalizeIndianPhone(x);
+      if (!n) ctx.addIssue({ code: "custom", message: `“${x}” isn't a valid Indian mobile number` });
+      return n ?? "";
+    }),
+  ),
+  due_day: z.number().int().min(1).max(28),
+  reminder_days: z.array(z.number().int().min(0).max(20)).max(4),
+});
+export type SettingsInput = z.input<typeof settingsSchema>;
+
+export async function saveSettings(input: SettingsInput): Promise<ActionResult<true>> {
+  const v = settingsSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    await (await requireDb()).rpc("save_settings", { p_data: v.data });
+    revalidatePath("/settings");
+    return true as const;
+  });
+}
+
+const TEMPLATE_KEYS = ["dues_we_pay", "challan_ready_client_pays", "payment_received", "challan_filed", "overdue"] as const;
+export async function saveTemplate(key: string, language: string, body: string): Promise<ActionResult<true>> {
+  const v = z.object({ key: z.enum(TEMPLATE_KEYS), language: z.enum(["hi", "en"]), body: z.string().trim().min(1, "A message can't be empty").max(2000) }).safeParse({ key, language, body });
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the message" };
+  return run(async () => {
+    await (await requireDb()).rpc("save_template", { p_key: v.data.key, p_language: v.data.language, p_body: v.data.body });
+    return true as const;
+  });
+}
+
+export async function setSplit(effectiveFrom: string, alok: number, rajeev: number): Promise<ActionResult<true>> {
+  const v = z.object({ d: isoDate, a: z.number().min(0).max(100), r: z.number().min(0).max(100) }).safeParse({ d: effectiveFrom, a: alok, r: rajeev });
+  if (!v.success || v.data.a + v.data.r !== 100) return { ok: false, error: "The split must add up to 100%" };
+  return run(async () => {
+    await (await requireDb()).rpc("set_split", { p_effective_from: v.data.d, p_alok: v.data.a, p_rajeev: v.data.r });
+    revalidatePath("/settings");
+    return true as const;
+  });
+}
+
+export async function voidPayment(paymentId: string, clientId: string, reason: string): Promise<ActionResult<true>> {
+  const v = z.object({ p: uuid, c: uuid, reason: z.string().trim().min(3, "Say why it's being voided").max(200) }).safeParse({ p: paymentId, c: clientId, reason });
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    await (await requireDb()).rpc("void_payment", { p_payment_id: v.data.p, p_reason: v.data.reason });
+    revalidatePath(`/clients/${v.data.c}`);
+    revalidatePath("/");
+    return true as const;
+  });
+}
+
+export async function reissueReceipt(receiptId: string, reason: string, language: "hi" | "en"): Promise<ActionResult<{ receipt_id: string; receipt_no: string }>> {
+  const v = z.object({ r: uuid, reason: z.string().trim().min(3, "Say why it's being reissued").max(200), l: z.enum(["hi", "en"]) }).safeParse({ r: receiptId, reason, l: language });
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => (await requireDb()).rpc<{ receipt_id: string; receipt_no: string }>("reissue_receipt", { p_receipt_id: v.data.r, p_reason: v.data.reason, p_language: v.data.l }));
+}

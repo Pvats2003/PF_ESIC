@@ -23,7 +23,7 @@ async function ReceiptLoader({ params }: { params: PageProps<"/receipts/[id]">["
     <>
       <Link href="/" className="mb-4 inline-flex h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"><ChevronLeft className="size-4" />Back</Link>
       <h1 className="mb-4 text-lg font-semibold">Receipt</h1>
-      <ReceiptShare receiptId={id} />
+      <ReceiptShare receiptId={id} allowReissue />
     </>
   );
 }

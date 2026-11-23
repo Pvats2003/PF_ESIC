@@ -1,6 +1,7 @@
 import { ChevronLeft, MessageCircle, Phone, Receipt as ReceiptIcon, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import type { ClientDetail } from "@/app/(app)/actions";
+import { VoidPaymentButton } from "@/components/payment/corrections";
 import { RecordPaymentButton } from "@/components/payment/record-payment-sheet";
 import { EditClientButton } from "./client-form-sheet";
 import { MonthActions } from "./month-actions";
@@ -131,6 +132,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
                   {p.receipt_id && (
                     <Button asChild variant="ghost" size="sm"><Link href={`/receipts/${p.receipt_id}`}><ReceiptIcon />{p.receipt_no}</Link></Button>
                   )}
+                  {!p.voided && <VoidPaymentButton paymentId={p.id} clientId={c.id} amount={p.amount} receiptNo={p.receipt_no} />}
                 </li>
               ))}
             </ul>

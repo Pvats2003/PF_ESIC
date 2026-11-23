@@ -11,6 +11,7 @@ export const ADMIN_URL = process.env.TEST_DATABASE_ADMIN_URL ?? "postgres://post
 export const TEST_DB = "pfesic_test";
 
 export const SEED_DB = "pfesic_seed_test";
+export const REPORTS_DB = "pfesic_reports_test";
 
 export function testDbUrl(name: string = TEST_DB): string {
   const u = new URL(ADMIN_URL);
@@ -22,6 +23,7 @@ export async function setupTestDatabase(): Promise<void> {
   const admin = new Client({ connectionString: ADMIN_URL });
   await admin.connect();
   await admin.query(`drop database if exists ${SEED_DB} with (force)`);
+  await admin.query(`drop database if exists ${REPORTS_DB} with (force)`);
   await admin.query(`drop database if exists ${TEST_DB} with (force)`);
   await admin.query(`create database ${TEST_DB}`);
 
@@ -43,6 +45,7 @@ export async function setupTestDatabase(): Promise<void> {
   }
   // A pristine copy with no test rows, for tests that need an empty database.
   await admin.query(`create database ${SEED_DB} template ${TEST_DB}`);
+  await admin.query(`create database ${REPORTS_DB} template ${TEST_DB}`);
   await admin.end();
 }
 

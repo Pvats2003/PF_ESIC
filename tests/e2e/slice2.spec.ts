@@ -56,7 +56,9 @@ test("send a reminder, then file the challan", async ({ page }) => {
   expect(opened[0]).toMatch(/^https:\/\/wa\.me\/\d*\?text=Namaste/);
   await expect(page.getByText("Message handed to WhatsApp")).toBeVisible();
 
-  // Now on the client page: record PF challan (we pay → TRRN is enough)
+  // Now on the client page: record PF challan (we pay → TRRN is enough).
+  // The client has left the "Not notified" filter, so look in All.
+  await page.getByRole("tab", { name: /^All/ }).click();
   await page.getByLabel("Search clients").fill(firm.slice(0, 14));
   await page.getByRole("row").filter({ hasText: firm }).getByRole("link").first().click();
   await expect(page.getByRole("heading", { name: firm })).toBeVisible();

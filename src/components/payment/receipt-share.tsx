@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getReceipt, logMessage } from "@/app/(app)/actions";
 import { Receipt } from "@/components/receipt/receipt";
+import { ReissueReceiptButton } from "./corrections";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,7 @@ import type { Lang } from "@/lib/format/dates";
 import { waMeNumber } from "@/lib/format/phone";
 
 /** Receipt preview with language switch, WhatsApp share (image + message) and download. */
-export function ReceiptShare({ receiptId }: { receiptId: string }) {
+export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: string; allowReissue?: boolean }) {
   const [data, setData] = useState<ReceiptRow | null>(null);
   const [error, setError] = useState<string>();
   const [lang, setLang] = useState<Lang>("hi");
@@ -93,6 +94,9 @@ export function ReceiptShare({ receiptId }: { receiptId: string }) {
 
   return (
     <div className="space-y-4">
+      {data.receipt.voided && (
+        <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger ring-1 ring-danger-line ring-inset">This receipt is void: {data.receipt.void_reason}</p>
+      )}
       <div className="flex items-center justify-between gap-3">
         <Segmented ariaLabel="Receipt language" value={lang} onChange={setLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: "English" }]} />
         <span className="tabular text-sm font-semibold text-primary-text">{data.receipt.receipt_no}</span>
@@ -113,6 +117,7 @@ export function ReceiptShare({ receiptId }: { receiptId: string }) {
           <Download />
           Image
         </Button>
+        {allowReissue && !data.receipt.voided && <ReissueReceiptButton receiptId={data.receipt.id} receiptNo={data.receipt.receipt_no} language={lang} />}
       </div>
     </div>
   );
