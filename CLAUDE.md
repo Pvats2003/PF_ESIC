@@ -30,11 +30,14 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   reconciliation (received / PF+ESIC / deposited / still to deposit / earned / owes; tabs partner, client, month, PF,
   ESIC, mode; mismatch list), partner settlement ("Rajeev → Alok ₹X", `src/lib/domain/settlement.ts`), receipt register
   (valid + void), Excel export (`/reports/export`, old sheet layout + PAYMENTS). Void payment and reissue receipt in the UI.
-  Phone nav: This month · Today · Clients · Reports · More. Next: command palette, swipe actions, month-closed moment,
-  expenses + partner transfers entry, walk-in quick service, client yearly statement PDF.
+  Phone nav: This month · Today · Clients · Reports · More.
+- **Phase 2 slice 4: done.** Walk-in work (`record_walk_in`: occasional client found by phone/alias or created, charge,
+  optional pay-now + receipt), shared expenses + money between partners (Reports → Partner settlement, void with reason),
+  Ctrl+K command palette (cmdk), phone swipe right = payment / left = reminder (one-time tip), month-closed card,
+  client statement per FY (`/clients/[id]/statement`, hi/en, image/PDF), receipt PDF (`src/lib/export/image-pdf.ts`, pdf-lib).
 - **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
-  update 4 = 20261127). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
-- Reports read `live_ledger` (financial_ledger minus legacy_settled months), so imported history never distorts
+  update 4 = 20261127, update 5 = 20261128). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
+- Reports read `live_ledger` (financial_ledger minus legacy_settled months and minus voided entries and their reversals), so imported history never distorts
   "government money held".
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.
 

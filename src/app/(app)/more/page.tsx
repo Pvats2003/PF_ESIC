@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Card } from "@/components/ui/card";
+import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 
 export const metadata: Metadata = { title: "More" };
 
@@ -15,7 +16,10 @@ const LINKS = [
 export default function MorePage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-[-0.02em]">More</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-[-0.02em]">More</h1>
+        <WalkInButton variant="primary" />
+      </div>
       <Card className="overflow-hidden">
         <ul className="divide-y divide-hairline">
           {LINKS.map(({ href, label, hint, icon: Icon }) => (

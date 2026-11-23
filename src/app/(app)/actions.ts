@@ -334,3 +334,67 @@ export async function reissueReceipt(receiptId: string, reason: string, language
   if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
   return run(async () => (await requireDb()).rpc<{ receipt_id: string; receipt_no: string }>("reissue_receipt", { p_receipt_id: v.data.r, p_reason: v.data.reason, p_language: v.data.l }));
 }
+
+// ─── Slice 4: walk-ins, expenses, partner transfers, search index ──────────
+const walkInSchema = z.object({
+  name: z.string().trim().min(1, "Enter the person's or firm's name").max(120),
+  phone: phoneField,
+  service_type: z.enum(["pf_claim", "registration", "appointment_letter", "pf_password", "pf_card", "challan", "other"]),
+  description: z.string().trim().max(200).optional().default(""),
+  amount_paise: z.number().int().positive("Enter the amount").max(1_00_00_000_00),
+  partner_code: z.enum(["A", "R"]),
+  paid_now: z.boolean(),
+  mode: z.enum(["cash", "upi", "bank"]),
+  reference: z.string().trim().max(80).optional().default(""),
+  language: z.enum(["hi", "en"]),
+  idempotency_key: uuid,
+});
+export type WalkInInput = z.input<typeof walkInSchema>;
+export interface WalkInResult { client_id: string; extra_charge_id: string; payment: PaymentResult | null }
+
+export async function recordWalkIn(input: WalkInInput): Promise<ActionResult<WalkInResult>> {
+  const v = walkInSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    const r = await (await requireDb()).rpc<WalkInResult>("record_walk_in", { p_data: { ...v.data, received_by_code: v.data.partner_code } });
+    revalidatePath("/");
+    revalidatePath("/clients");
+    return r;
+  });
+}
+
+export async function addExpense(input: { spentOn: string; amountPaise: number; description: string; paidBy: "A" | "R" }): Promise<ActionResult<string>> {
+  const v = z.object({ spentOn: isoDate, amountPaise: z.number().int().positive("Enter the amount"), description: z.string().trim().min(2, "Say what it was for").max(200), paidBy: z.enum(["A", "R"]) }).safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    const id = await (await requireDb()).rpc<string>("add_expense", { p_spent_on: v.data.spentOn, p_amount_paise: v.data.amountPaise, p_description: v.data.description, p_paid_by_code: v.data.paidBy });
+    revalidatePath("/reports");
+    return id;
+  });
+}
+
+export async function addTransfer(input: { from: "A" | "R"; to: "A" | "R"; amountPaise: number; on: string; kind: "settlement" | "gov_handover"; note: string }): Promise<ActionResult<string>> {
+  const v = z.object({ from: z.enum(["A", "R"]), to: z.enum(["A", "R"]), amountPaise: z.number().int().positive("Enter the amount"), on: isoDate, kind: z.enum(["settlement", "gov_handover"]), note: z.string().trim().max(200) }).safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (v.data.from === v.data.to) return { ok: false, error: "Choose two different partners" };
+  return run(async () => {
+    const id = await (await requireDb()).rpc<string>("add_partner_transfer", { p_from_code: v.data.from, p_to_code: v.data.to, p_amount_paise: v.data.amountPaise, p_on: v.data.on, p_kind: v.data.kind, p_note: v.data.note });
+    revalidatePath("/reports");
+    return id;
+  });
+}
+
+export async function voidMoneyMove(kind: "expense" | "transfer", id: string, reason: string): Promise<ActionResult<true>> {
+  const v = z.object({ kind: z.enum(["expense", "transfer"]), id: uuid, reason: z.string().trim().min(3, "Give a reason").max(200) }).safeParse({ kind, id, reason });
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    await (await requireDb()).rpc("void_money_move", { p_kind: v.data.kind, p_id: v.data.id, p_reason: v.data.reason });
+    revalidatePath("/reports");
+    return true as const;
+  });
+}
+
+export interface SearchClient { id: string; firm_name: string; owner_name: string | null; kind: "regular" | "occasional"; active: boolean; owes: number; aliases: string[] }
+export async function getSearchIndex(): Promise<ActionResult<SearchClient[]>> {
+  return run(async () => (await requireDb()).rpc<SearchClient[]>("clients_overview"));
+}

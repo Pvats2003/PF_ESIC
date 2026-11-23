@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { RowReminder } from "@/components/board/board-view";
+import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 import { ChallanSheet, VerifyChallanSheet, type ChallanMonth } from "@/components/challan/challan-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -46,6 +47,7 @@ export function QueueView({ boards }: { boards: Board[] }) {
           <h1 className="text-xl font-semibold tracking-[-0.02em]">Today</h1>
           <p className="mt-1 text-sm text-ink-muted">{items.length ? `${items.length - done.size} things to do, most urgent first.` : "Nothing waiting."}</p>
         </div>
+        <WalkInButton variant="soft" />
         <Card className="overflow-hidden">
           <ul className="divide-y divide-hairline">
             {(Object.keys(QUEUE_LABELS) as QueueKind[]).map((k) => {

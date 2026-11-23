@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { CommandPalette, SearchButton } from "./command-palette";
 import { Suspense } from "react";
 import { BottomTabLinks, BottomTabs, SidebarLinks, SidebarNav } from "./nav";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,6 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-hindi block text-xs text-ink-muted">पीएफ ईएसआईसी डेस्क</span>
           </span>
         </Link>
+        <SearchButton />
         <Suspense fallback={<SidebarLinks />}>
           <SidebarNav />
         </Suspense>
@@ -46,6 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Suspense fallback={<BottomTabLinks />}>
         <BottomTabs />
       </Suspense>
+      <CommandPalette />
     </div>
   );
 }

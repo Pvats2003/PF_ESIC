@@ -1,14 +1,15 @@
 "use client";
 
-import { ArrowRight, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { ArrowRight, BadgeCheck, MessageCircle, X, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
+import { motion, useReducedMotion, type PanInfo } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { startMonth } from "@/app/(app)/actions";
 import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
+import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CountdownChip } from "@/components/ui/countdown-chip";
@@ -52,6 +53,7 @@ export function BoardView({ board }: { board: Board }) {
           {board.rows.length > 0 && (
             <Button asChild variant="secondary"><Link href={`/entry?month=${monthParam(board.month)}`}><Keyboard />Enter PF/ESIC</Link></Button>
           )}
+          <WalkInButton />
           {board.rows.length > 0 && board.not_started > 0 && <StartMonthButton month={board.month} label={`Add ${board.not_started} new client${board.not_started > 1 ? "s" : ""}`} variant="soft" />}
         </div>
       </div>
@@ -67,6 +69,8 @@ export function BoardView({ board }: { board: Board }) {
         </Card>
       ) : (
         <>
+          {s.total > 0 && s.done === s.total && <MonthClosed month={board.month} handled={s.pfPaise + s.esicPaise + s.feesPaise} clients={s.total} overdue={s.overdue} />}
+
           {/* ── Summary ─────────────────────────────────────── */}
           <section aria-label="Summary" className="mt-6 grid gap-4 lg:grid-cols-[260px_1fr]">
             <Card className="flex flex-row items-center gap-5 p-5 lg:flex-col lg:justify-center">
@@ -124,7 +128,7 @@ export function BoardView({ board }: { board: Board }) {
           ) : (
             <>
               <DesktopTable rows={rows} onPay={setPayFor} onRemind={setRemindFor} />
-              <PhoneList rows={rows} onPay={setPayFor} />
+              <PhoneList rows={rows} onPay={setPayFor} onRemind={setRemindFor} />
             </>
           )}
         </>
@@ -265,31 +269,121 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
   );
 }
 
-function PhoneList({ rows, onPay }: { rows: BoardRow[]; onPay: (id: string) => void }) {
+function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHint(localStorage.getItem("pfesic:swipe-hint") !== "seen");
+    } catch {}
+  }, []);
+  const seen = () => {
+    setHint(false);
+    try { localStorage.setItem("pfesic:swipe-hint", "seen"); } catch {}
+  };
   return (
-    <Card className="mt-4 overflow-hidden lg:hidden">
-      <ul className="divide-y divide-hairline">
-        {rows.map((r) => (
-          <li key={r.monthly_record_id} className="flex items-center gap-3 px-4 py-3">
-            <Link href={`/clients/${r.client_id}`} className="min-w-0 flex-1">
-              <span className="line-clamp-2 text-base leading-snug font-semibold">{r.firm_name}</span>
-              <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <StatusChip status={statusOf(r)} size="sm" />
-                {r.challan_payer === "client" && <ClientPaysChip />}
-              </span>
-            </Link>
-            <div className="shrink-0 text-right">
-              {pendingAmounts(r) ? <span className="text-sm text-ink-faint">—</span> : r.owes ? <Money paise={r.owes} size="md" tone={r.overdue ? "danger" : "default"} /> : <Money paise={r.received} size="md" tone="success" />}
-              <div className="text-xs text-ink-faint">{pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due"}</div>
-            </div>
-            {r.owes > 0 ? (
-              <Button variant="soft" size="icon" aria-label={`Record payment for ${r.firm_name}`} onClick={() => onPay(r.client_id)}><Wallet /></Button>
-            ) : (
-              <Link href={`/clients/${r.client_id}`} aria-label={`Open ${r.firm_name}`} className="grid size-11 place-items-center text-ink-faint"><ArrowRight className="size-4" /></Link>
-            )}
-          </li>
-        ))}
-      </ul>
+    <div className="mt-4 lg:hidden">
+      {hint && (
+        <div className="mb-3 flex items-center gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-ink ring-1 ring-inset ring-[color-mix(in_oklab,var(--accent)_40%,transparent)]">
+          <span className="flex-1">Tip: swipe a client <strong>right</strong> to record a payment, <strong>left</strong> to send a WhatsApp reminder.</span>
+          <button onClick={seen} aria-label="Got it" className="grid size-9 place-items-center rounded-lg text-ink-muted"><X className="size-4" /></button>
+        </div>
+      )}
+      <Card className="overflow-hidden">
+        <ul className="divide-y divide-hairline">
+          {rows.map((r) => <SwipeRow key={r.monthly_record_id} r={r} onPay={() => { seen(); onPay(r.client_id); }} onRemind={() => { seen(); onRemind(r); }} />)}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
+const SWIPE = 90;
+
+function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRemind: () => void }) {
+  const reduce = useReducedMotion();
+  const canPay = r.owes > 0;
+  const canRemind = r.amount_status === "ENTERED" && r.overall_status !== "DONE" && (r.owes > 0 || r.challan_payer === "client");
+  // A swipe must not also count as a tap on the client's name (which would open the client page).
+  const dragged = useRef(false);
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    // The tap (click) can arrive before or after this; keep blocking it briefly.
+    setTimeout(() => (dragged.current = false), 350);
+    if (info.offset.x > SWIPE && canPay) onPay();
+    else if (info.offset.x < -SWIPE && canRemind) onRemind();
+  };
+  const blockTapAfterSwipe = (e: React.MouseEvent) => {
+    if (dragged.current) e.preventDefault();
+  };
+  return (
+    <li className="relative">
+      {/* What's under the row while swiping */}
+      <div aria-hidden className="absolute inset-0 flex items-center justify-between px-5 text-sm font-semibold">
+        <span className={cn("flex items-center gap-2", canPay ? "text-success" : "text-ink-faint")}><Wallet className="size-5" />Payment</span>
+        <span className={cn("flex items-center gap-2", canRemind ? "text-success" : "text-ink-faint")}>WhatsApp<MessageCircle className="size-5" /></span>
+      </div>
+      <motion.div
+        drag={reduce ? false : "x"}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: canRemind ? 0.6 : 0.1, right: canPay ? 0.6 : 0.1 }}
+        onDragStart={() => (dragged.current = true)}
+        onDragEnd={onDragEnd}
+        className="relative flex touch-pan-y items-center gap-3 bg-surface px-4 py-3"
+      >
+        <Link href={`/clients/${r.client_id}`} className="min-w-0 flex-1" draggable={false} onClickCapture={blockTapAfterSwipe}>
+          <span className="line-clamp-2 text-base leading-snug font-semibold">{r.firm_name}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <StatusChip status={statusOf(r)} size="sm" />
+            {r.challan_payer === "client" && <ClientPaysChip />}
+          </span>
+        </Link>
+        <div className="shrink-0 text-right">
+          {pendingAmounts(r) ? <span className="text-sm text-ink-faint">—</span> : r.owes ? <Money paise={r.owes} size="md" tone={r.overdue ? "danger" : "default"} /> : <Money paise={r.received} size="md" tone="success" />}
+          <div className="text-xs text-ink-faint">{pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due"}</div>
+        </div>
+        {canPay ? (
+          <Button variant="soft" size="icon" aria-label={`Record payment for ${r.firm_name}`} onClick={onPay}><Wallet /></Button>
+        ) : (
+          <Link href={`/clients/${r.client_id}`} aria-label={`Open ${r.firm_name}`} className="grid size-11 place-items-center text-ink-faint"><ArrowRight className="size-4" /></Link>
+        )}
+      </motion.div>
+    </li>
+  );
+}
+
+/** The "month closed" moment: a calm summary with a one-time seal stamp. */
+function MonthClosed({ month, handled, clients, overdue }: { month: string; handled: number; clients: number; overdue: number }) {
+  const reduce = useReducedMotion();
+  const [animate, setAnimate] = useState(false);
+  useEffect(() => {
+    try {
+      const key = `pfesic:closed:${month}`;
+      if (!localStorage.getItem(key)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAnimate(true);
+        localStorage.setItem(key, "1");
+      }
+    } catch {}
+  }, [month]);
+  const name = formatMonth(month).split(" ")[0];
+  return (
+    <Card className="mt-6 flex items-center gap-5 overflow-hidden border border-success-line bg-success-soft p-5">
+      <motion.div
+        initial={animate && !reduce ? { scale: 2.2, rotate: -30, opacity: 0 } : false}
+        animate={{ scale: 1, rotate: -12, opacity: 1 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="grid size-20 shrink-0 place-items-center rounded-full border-[3px] border-success text-success"
+        aria-hidden
+      >
+        <BadgeCheck className="size-9 stroke-[1.75]" />
+      </motion.div>
+      <div>
+        <div className="text-lg font-semibold">{name} closed.</div>
+        <div className="mt-0.5 text-sm text-ink-muted">
+          <Money paise={handled} size="sm" /> handled · {clients} clients · {overdue} overdue. Every client paid, challans filed and receipts shared.
+        </div>
+      </div>
     </Card>
   );
 }

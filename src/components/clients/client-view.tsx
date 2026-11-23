@@ -1,4 +1,4 @@
-import { ChevronLeft, MessageCircle, Phone, Receipt as ReceiptIcon, ShieldAlert } from "lucide-react";
+import { ChevronLeft, FileText, MessageCircle, Phone, Receipt as ReceiptIcon, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import type { ClientDetail } from "@/app/(app)/actions";
 import { VoidPaymentButton } from "@/components/payment/corrections";
@@ -49,6 +49,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
         <div className="flex flex-wrap gap-2">
           {c.phone && <Button asChild variant="secondary"><a href={`tel:${c.phone}`}><Phone />Call</a></Button>}
           {wa && <Button asChild variant="secondary"><a href={`https://wa.me/${waMeNumber(wa)}`} target="_blank" rel="noopener noreferrer"><MessageCircle />WhatsApp</a></Button>}
+          <Button asChild variant="secondary"><Link href={`/clients/${c.id}/statement`}><FileText />Statement</Link></Button>
           <EditClientButton client={c} />
           <RecordPaymentButton clientId={c.id} />
         </div>

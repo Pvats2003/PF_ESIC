@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, MessageCircle } from "lucide-react";
+import { Download, FileDown, MessageCircle } from "lucide-react";
+import { downloadBlob, pngToPdf } from "@/lib/export/image-pdf";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getReceipt, logMessage } from "@/app/(app)/actions";
@@ -116,6 +117,10 @@ export function ReceiptShare({ receiptId, allowReissue = false }: { receiptId: s
         <Button variant="secondary" size="lg" onClick={async () => download(await makeFile())}>
           <Download />
           Image
+        </Button>
+        <Button variant="secondary" size="lg" onClick={async () => downloadBlob(await pngToPdf(await makeFile()), fileName.replace(/\.png$/, ".pdf"))}>
+          <FileDown />
+          PDF
         </Button>
         {allowReissue && !data.receipt.voided && <ReissueReceiptButton receiptId={data.receipt.id} receiptNo={data.receipt.receipt_no} language={lang} />}
       </div>
