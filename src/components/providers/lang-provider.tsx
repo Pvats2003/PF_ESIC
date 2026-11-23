@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { LANG_COOKIE, LANG_STORAGE, translate, type T, type UiLang, type Vars } from "@/lib/i18n/translate";
 
 /**
@@ -36,29 +36,26 @@ function subscribe(cb: () => void) {
   };
 }
 
-interface LangCtx {
-  lang: UiLang;
-  setLang: (l: UiLang) => void;
-  t: T;
-}
-
-const Ctx = createContext<LangCtx>({ lang: "en", setLang: () => {}, t: (k, v) => translate("en", k, v) });
-
+/**
+ * Every component reads the language through the store itself (not a context):
+ * a part of the page that streams in later then hydrates with the server's
+ * English first and switches right after, instead of mismatching the HTML.
+ */
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const lang = useSyncExternalStore(subscribe, read, () => "en" as UiLang);
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+  return <>{children}</>;
+}
+
+export function useLang(): { lang: UiLang; setLang: (l: UiLang) => void; t: T } {
+  const lang = useSyncExternalStore(subscribe, read, () => "en" as UiLang);
   const t = useCallback<T>((k: string, v?: Vars) => translate(lang, k, v), [lang]);
-  const value = useMemo(() => ({ lang, setLang: write, t }), [lang, t]);
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return useMemo(() => ({ lang, setLang: write, t }), [lang, t]);
 }
 
-export function useLang() {
-  return useContext(Ctx);
-}
-
-/** For server components: `<T k="Back" />`. */
+/** For server components: `<Tr k="Back" />`. */
 export function Tr({ k, vars }: { k: string; vars?: Vars }) {
   return <>{useLang().t(k, vars)}</>;
 }

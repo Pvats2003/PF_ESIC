@@ -219,8 +219,8 @@ const challanMonth = (r: BoardRow): ChallanMonth => ({
 /** Everything the Call / WhatsApp sheet needs about a board row. */
 export function contactTarget(r: BoardRow): ContactTarget {
   return {
-    clientId: r.client_id, firmName: r.firm_name, phone: r.phone, whatsapp: r.whatsapp_phone, language: r.preferred_language,
-    month: r.amount_status === "ENTERED" && !r.legacy_settled
+    clientId: r.client_id, firmName: r.firm_name, phone: r.phone, whatsapp: r.whatsapp_phone, language: r.preferred_language, ownerName: r.owner_name,
+    month: !r.legacy_settled
       ? { monthlyRecordId: r.monthly_record_id, figures: { ...r, firm_name_hi: null, ...challanFigures(r.challans) }, hasChallan: !!r.challans?.length, latestReceiptId: r.latest_receipt_id }
       : undefined,
   };

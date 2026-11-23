@@ -13,6 +13,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Chip, ClientPaysChip } from "@/components/ui/status-chip";
 import { matchesSearch } from "@/lib/domain/board";
 import { AddClientButton } from "./client-form-sheet";
+import { ContactButton } from "@/components/messages/contact-sheet";
 import { cn } from "@/lib/utils";
 
 export interface ClientListRow {
@@ -63,8 +64,8 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
         <Card className="mt-6 overflow-hidden">
           <ul className="divide-y divide-hairline">
             {list.map((r) => (
-              <li key={r.id}>
-                <Link href={`/clients/${r.id}`} className={cn("flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2/60", !r.active && "opacity-60")}>
+              <li key={r.id} className="flex items-center pr-3 transition-colors hover:bg-surface-2/60">
+                <Link href={`/clients/${r.id}`} className={cn("flex min-w-0 flex-1 items-center gap-4 py-3.5 pl-5", !r.active && "opacity-60")}>
                   <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary-text">
                     {r.firm_name.split(" ").slice(0, 2).map((w) => w[0]).join("")}
                   </span>
@@ -86,6 +87,7 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
                     <span className="block text-xs text-ink-faint">{r.owes ? t("owes") : r.advance ? t("advance") : ""}</span>
                   </span>
                 </Link>
+                <ContactButton compact target={{ clientId: r.id, firmName: r.firm_name, phone: r.phone, whatsapp: r.whatsapp_phone, language: "hi", ownerName: r.owner_name }} />
               </li>
             ))}
           </ul>

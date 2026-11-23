@@ -12,16 +12,21 @@ const keys = (m: ContactMonth) => messageOptions(m).map((o) => o.key);
 
 describe("Call / WhatsApp: which ready messages, suggested first", () => {
   it("we pay, money owed: dues reminder first", () => {
-    expect(keys(month({}))).toEqual(["dues_we_pay", "overdue"]);
+    expect(keys(month({}))).toEqual(["dues_we_pay", "overdue", "free"]);
   });
   it("client pays the challan: challan-ready message instead of dues", () => {
-    expect(keys(month({ challan_payer: "client", owes: 500_00 }))).toEqual(["challan_ready_client_pays", "overdue"]);
+    expect(keys(month({ challan_payer: "client", owes: 500_00 }))).toEqual(["challan_ready_client_pays", "overdue", "free"]);
   });
   it("past the due date with money owed: overdue first", () => {
     expect(keys(month({ overdue: true }))[0]).toBe("overdue");
   });
   it("paid and challan filed: 'challan filed' first, then receipt", () => {
-    expect(keys(month({ owes: 0 }, { hasChallan: true, latestReceiptId: "r1" }))).toEqual(["challan_filed", "dues_we_pay", "receipt"]);
+    expect(keys(month({ owes: 0 }, { hasChallan: true, latestReceiptId: "r1" }))).toEqual(["challan_filed", "dues_we_pay", "receipt", "free"]);
+  });
+  it("PF/ESIC not entered yet, or a ₹0 month: still offers WhatsApp — ask for the details first", () => {
+    expect(keys(month({ pf_paise: null, esic_paise: null, owes: 0 }))).toEqual(["ask_details", "free"]);
+    expect(keys(month({ pf_paise: null, esic_paise: null, charge_paise: 0, owes: 0 }))[0]).toBe("ask_details");
+    expect(keys(month({ pf_paise: 0, esic_paise: 0, charge_paise: 0, owes: 0 }))).toEqual(["dues_we_pay", "free"]);
   });
   it("paid, no challan yet: receipt thanks first", () => {
     expect(keys(month({ owes: 0 }, { latestReceiptId: "r1" }))[0]).toBe("receipt");

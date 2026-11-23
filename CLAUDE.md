@@ -41,6 +41,11 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   on every board row (desktop icon, phone icon + swipe left), client-page months and Today: call, chat, and any ready
   message with the suggested one first; adds a phone inline if missing. After saving a challan we paid: "Tell the client"
   (challan_filed message). Fast phone entry `/clients/phones` (`set_client_phones`, update 6 = 20261129).
+  WhatsApp is always on offer: before PF/ESIC is entered the sheet suggests "Ask for attendance and wages", and every
+  client (also on the client page and the client list) can get "Write your own message" (`extraMessage`, logged as `other`,
+  never marks the month notified).
+- Screen language is read per component through `useSyncExternalStore` (no context), so late-streamed parts hydrate in
+  English first; a context here caused hydration error #418 and blank pages in Hindi.
 - **Ease-of-use pass: done.** Labelled "Next step" per client month (`src/lib/domain/next-step.ts`, board desktop column,
   phone rows, client page), phone summary as one slim line + swipeable figures, client page month cards on phones,
   `/help` five-step guide + one-time welcome pointer, friendly 404, plain validation messages (`firstError` in actions),

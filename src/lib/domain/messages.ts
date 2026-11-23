@@ -65,3 +65,25 @@ export function buildMessage(key: MessageKey, m: MonthFigures, setup: MessageSet
     business_name: lang === "hi" ? setup.business.name_hi || setup.business.name_en : setup.business.name_en,
   });
 }
+
+/**
+ * Messages that don't need any amounts, so WhatsApp is always on offer: asking
+ * for the month's attendance and wages (before PF/ESIC is known), and a plain
+ * greeting to write anything. Built in code, logged as type "other".
+ */
+export type ExtraMessageKey = "ask_details" | "free";
+export type AnyMessageKey = MessageKey | ExtraMessageKey;
+export const isExtraMessage = (k: AnyMessageKey): k is ExtraMessageKey => k === "ask_details" || k === "free";
+
+export function extraMessage(key: ExtraMessageKey, m: Pick<MonthFigures, "firm_name" | "firm_name_hi" | "owner_name" | "wage_month">, setup: MessageSetup, lang: Lang): string {
+  const owner = m.owner_name ?? (lang === "hi" ? "महोदय" : "Sir/Madam");
+  const firm = lang === "hi" && m.firm_name_hi ? m.firm_name_hi : m.firm_name;
+  const biz = lang === "hi" ? setup.business.name_hi || setup.business.name_en : setup.business.name_en;
+  const month = formatMonth(m.wage_month, lang);
+  if (key === "ask_details") {
+    return lang === "hi"
+      ? `नमस्ते ${owner} जी,\n${firm} का ${month} का हाज़िरी और वेतन विवरण भेज दें, ताकि PF/ESIC चालान समय पर बन सके।\nधन्यवाद,\n${biz}`
+      : `Namaste ${owner} ji,\nPlease send the ${month} attendance and wages for ${firm}, so we can prepare the PF/ESIC challan on time.\nThank you,\n${biz}`;
+  }
+  return lang === "hi" ? `नमस्ते ${owner} जी,\n\n\nधन्यवाद,\n${biz}` : `Namaste ${owner} ji,\n\n\nThank you,\n${biz}`;
+}

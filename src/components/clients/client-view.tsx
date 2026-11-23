@@ -1,10 +1,10 @@
 "use client";
 
-import { ChevronLeft, FileText, MessageCircle, Phone, Receipt as ReceiptIcon, ShieldAlert } from "lucide-react";
+import { ChevronLeft, FileText, MessageCircle, Receipt as ReceiptIcon, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import type { ClientDetail } from "@/app/(app)/actions";
 import { useLang } from "@/components/providers/lang-provider";
-import { ContactButton } from "@/components/messages/contact-sheet";
+import { challanFigures, ContactButton } from "@/components/messages/contact-sheet";
 import { VoidPaymentButton } from "@/components/payment/corrections";
 import { RecordPaymentButton } from "@/components/payment/record-payment-sheet";
 import { EditClientButton } from "./client-form-sheet";
@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Figure, Money } from "@/components/ui/money";
 import { Chip, ClientPaysChip, StatusChip, type RecordStatus } from "@/components/ui/status-chip";
 import { formatDate, formatMonth } from "@/lib/format/dates";
-import { formatIndianPhone, waMeNumber } from "@/lib/format/phone";
+import { formatIndianPhone } from "@/lib/format/phone";
 import { cn } from "@/lib/utils";
 
 const CHALLAN: Record<string, { label: string; tone: "success" | "warning" | "neutral" | "info" }> = {
@@ -33,7 +33,7 @@ const dash = <span className="text-ink-faint">—</span>;
 
 export function ClientView({ d }: { d: ClientDetail }) {
   const c = d.client;
-  const wa = c.whatsapp_phone ?? c.phone;
+  const latest = d.months.find((m) => !m.legacy_settled);
   const { t, lang } = useLang();
   return (
     <div className="space-y-6">
@@ -54,9 +54,18 @@ export function ClientView({ d }: { d: ClientDetail }) {
         {/* Phone: the main action full width, the rest in one even row */}
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <RecordPaymentButton clientId={c.id} className="col-span-2 sm:order-last" />
-          {c.phone && <Button asChild variant="secondary"><a href={`tel:${c.phone}`}><Phone />{t("Call")}</a></Button>}
-          {wa && <Button asChild variant="secondary"><a href={`https://wa.me/${waMeNumber(wa)}`} target="_blank" rel="noopener noreferrer"><MessageCircle />WhatsApp</a></Button>}
-          {!wa && <ContactButton className="col-span-2" target={{ clientId: c.id, firmName: c.firm_name, phone: null, whatsapp: null, language: c.preferred_language }} />}
+          {/* Call, WhatsApp chat and every ready message, about the latest month (or a free message if none yet) */}
+          <ContactButton className="col-span-2" target={{
+            clientId: c.id, firmName: c.firm_name, phone: c.phone, whatsapp: c.whatsapp_phone, language: c.preferred_language, ownerName: c.owner_name,
+            month: latest ? {
+              monthlyRecordId: latest.monthly_record_id, hasChallan: latest.challans.length > 0, latestReceiptId: d.payments.find((p) => !p.voided && p.receipt_id)?.receipt_id ?? null,
+              figures: {
+                firm_name: c.firm_name, firm_name_hi: c.firm_name_hi, owner_name: c.owner_name, wage_month: latest.wage_month, due_date: latest.due_date,
+                challan_payer: latest.challan_payer, pf_paise: latest.pf_paise, esic_paise: latest.esic_paise, charge_paise: latest.charge_paise,
+                extras_paise: latest.extras_paise, owes: latest.owes, overdue: latest.overdue, ...challanFigures(latest.challans),
+              },
+            } : undefined,
+          }} />
           <Button asChild variant="secondary"><Link href={`/clients/${c.id}/statement`}><FileText />{t("Statement")}</Link></Button>
           <EditClientButton client={c} />
         </div>

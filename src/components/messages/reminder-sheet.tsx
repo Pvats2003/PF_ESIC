@@ -2,21 +2,23 @@
 
 import { Copy, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getMessageSetup, logMessage } from "@/app/(app)/actions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
-import { buildMessage, reminderKind, type MessageKey, type MessageSetup, type MonthFigures } from "@/lib/domain/messages";
+import { buildMessage, extraMessage, isExtraMessage, reminderKind, type AnyMessageKey, type MessageSetup, type MonthFigures } from "@/lib/domain/messages";
 import { formatMonth, type Lang } from "@/lib/format/dates";
 import { waMeNumber } from "@/lib/format/phone";
 import { useLang } from "@/components/providers/lang-provider";
 
 let setupCache: MessageSetup | null = null;
 
-const TITLES: Record<MessageKey, string> = {
+const TITLES: Record<AnyMessageKey, string> = {
+  ask_details: "Ask for attendance and wages",
+  free: "Write your own message",
   dues_we_pay: "Send dues reminder",
   challan_ready_client_pays: "Send challan details",
   overdue: "Send overdue reminder",
@@ -25,13 +27,15 @@ const TITLES: Record<MessageKey, string> = {
 };
 
 /** Builds the right WhatsApp message for a month, lets him edit it, sends it, logs it. */
-export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, language, kind, open, onOpenChange, onSent }: {
+export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, language, kind, noMonth, open, onOpenChange, onSent }: {
   clientId: string;
-  monthlyRecordId: string;
+  monthlyRecordId?: string;
   figures: MonthFigures;
   phone: string | null;
   language: Lang;
-  kind?: MessageKey;
+  kind?: AnyMessageKey;
+  /** No month (e.g. a client with no months yet): the title shows only the firm. */
+  noMonth?: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onSent?: () => void;
@@ -39,9 +43,10 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
   const { t } = useLang();
   const router = useRouter();
   const key = kind ?? reminderKind(figures);
+  const build = useCallback((s: MessageSetup, l: Lang) => (isExtraMessage(key) ? extraMessage(key, figures, s, l) : buildMessage(key, figures, s, l)), [key, figures]);
   const [setup, setSetup] = useState<MessageSetup | null>(setupCache);
   const [lang, setLang] = useState<Lang>(language);
-  const [text, setText] = useState(() => (setupCache ? buildMessage(key, figures, setupCache, language) : ""));
+  const [text, setText] = useState(() => (setupCache ? build(setupCache, language) : ""));
 
   useEffect(() => {
     if (setup) return;
@@ -49,13 +54,13 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
       if (!r.ok) return toast.error(t("Couldn't load message templates"), { description: t(r.error) });
       setupCache = r.data;
       setSetup(r.data);
-      setText(buildMessage(key, figures, r.data, lang));
+      setText(build(r.data, lang));
     });
-  }, [setup, key, figures, lang, t]);
+  }, [setup, build, lang, t]);
 
   function changeLang(l: Lang) {
     setLang(l);
-    if (setup) setText(buildMessage(key, figures, setup, l));
+    if (setup) setText(build(setup, l));
   }
 
   async function send() {
@@ -73,7 +78,7 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
     }
     if (!shared) return;
     // Logged as "shared": we handed it to WhatsApp. Delivery can't be known without the WhatsApp API.
-    const r = await logMessage({ clientId, type: key, language: lang, body: text, status: "shared", monthlyRecordId });
+    const r = await logMessage({ clientId, type: isExtraMessage(key) ? "other" : key, language: lang, body: text, status: "shared", monthlyRecordId: isExtraMessage(key) ? undefined : monthlyRecordId });
     if (!r.ok) toast.error(t("Sent, but not logged"), { description: t(r.error) });
     else toast.success(t("Message handed to WhatsApp"), { description: t("Marked as notified.") });
     onOpenChange(false);
@@ -86,7 +91,7 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
       open={open}
       onOpenChange={onOpenChange}
       title={t(TITLES[key])}
-      description={`${figures.firm_name} · ${formatMonth(figures.wage_month, lang)}`}
+      description={noMonth ? figures.firm_name : `${figures.firm_name} · ${formatMonth(figures.wage_month, lang)}`}
       footer={
         <div className="flex gap-2">
           <Button variant="whatsapp" size="lg" className="flex-1" disabled={!text} onClick={send}><MessageCircle />{t("Send on WhatsApp")}</Button>

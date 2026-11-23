@@ -538,6 +538,10 @@ export const HI: Record<string, string> = {
 
   // ── Call / WhatsApp sheet, challan "tell the client", phone entry ──
   "Phones": "फ़ोन नंबर",
+  "Ask for attendance and wages": "हाज़िरी और वेतन विवरण माँगें",
+  "Before PF/ESIC is known: asks them to send this month's details": "PF/ESIC बनने से पहले: इस महीने का विवरण भेजने को कहें",
+  "Write your own message": "अपना संदेश लिखें",
+  "A greeting and your name; type anything in between": "नमस्ते और आपका नाम; बीच में जो चाहें लिखें",
   "Client phones": "ग्राहकों के फ़ोन",
   "Call or WhatsApp {name}": "{name} को कॉल या व्हाट्सऐप",
   "Call or WhatsApp": "कॉल या व्हाट्सऐप",

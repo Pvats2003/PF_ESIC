@@ -46,3 +46,14 @@ it("addDays crosses months and years", () => {
   expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
   expect(addDays("2027-03-01", -1)).toBe("2027-02-28");
 });
+
+describe("messages that need no amounts", () => {
+  const setup = { templates: {}, business: { name_en: "Rajeev Kumar Mishra", name_hi: "राजीव कुमार मिश्रा", phones: [], due_day: 15 } };
+  const m = { firm_name: "Uttam Engineering", firm_name_hi: null, owner_name: "Ramesh", wage_month: "2026-11-01" };
+  it("asks for attendance and wages in either language", async () => {
+    const { extraMessage } = await import("@/lib/domain/messages");
+    expect(extraMessage("ask_details", m, setup, "en")).toContain("November 2026 attendance and wages for Uttam Engineering");
+    expect(extraMessage("ask_details", m, setup, "hi")).toContain("नवंबर 2026 का हाज़िरी और वेतन विवरण");
+    expect(extraMessage("free", m, setup, "hi")).toMatch(/^नमस्ते Ramesh जी,[\s\S]*राजीव कुमार मिश्रा$/);
+  });
+});

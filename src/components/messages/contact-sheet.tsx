@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Chip } from "@/components/ui/status-chip";
 import { messageOptions, type ContactMonth } from "@/lib/domain/contact";
-import type { MessageKey } from "@/lib/domain/messages";
-import { formatMonth, type Lang } from "@/lib/format/dates";
+import type { AnyMessageKey, MonthFigures } from "@/lib/domain/messages";
+import { currentWageMonth, formatMonth, type Lang } from "@/lib/format/dates";
 import { formatIndianPhone, waMeNumber } from "@/lib/format/phone";
 import { cn } from "@/lib/utils";
 import { ReminderSheet } from "./reminder-sheet";
@@ -25,17 +25,31 @@ export interface ContactTarget {
   phone: string | null;
   whatsapp: string | null;
   language: Lang;
-  /** The month the messages are about (left out: only call / chat). */
+  ownerName?: string | null;
+  /** The month the messages are about (left out: call, chat and a message you write). */
   month?: ContactMonth;
 }
 
 export function ContactSheet({ target, open, onOpenChange, onSent }: { target: ContactTarget; open: boolean; onOpenChange: (o: boolean) => void; onSent?: () => void }) {
   const { t, lang } = useLang();
   const [phones, setPhones] = useState({ phone: target.phone, whatsapp: target.whatsapp });
-  const [kind, setKind] = useState<MessageKey | null>(null);
+  const [kind, setKind] = useState<AnyMessageKey | null>(null);
   const callNo = phones.phone ?? phones.whatsapp;
   const waNo = phones.whatsapp ?? phones.phone;
-  const options = target.month ? messageOptions(target.month) : [];
+  const options = target.month
+    ? messageOptions(target.month)
+    : [{ key: "free" as const, label: "Write your own message", why: "A greeting and your name; type anything in between" }];
+
+  if (kind && !target.month) {
+    const figures: MonthFigures = {
+      firm_name: target.firmName, owner_name: target.ownerName ?? null, wage_month: currentWageMonth(), due_date: currentWageMonth(),
+      challan_payer: "us", pf_paise: null, esic_paise: null, charge_paise: 0, extras_paise: 0, owes: 0, overdue: false,
+    };
+    return (
+      <ReminderSheet open noMonth kind={kind} onOpenChange={(o) => { if (!o) { setKind(null); onOpenChange(false); } }} onSent={onSent}
+        clientId={target.clientId} phone={waNo} language={target.language} figures={figures} />
+    );
+  }
 
   if (kind && target.month) {
     return (
@@ -88,7 +102,7 @@ export function ContactSheet({ target, open, onOpenChange, onSent }: { target: C
                       <ChevronRight className="size-4 text-ink-faint" />
                     </Link>
                   ) : (
-                    <button type="button" className={row} onClick={() => setKind(o.key as MessageKey)}>
+                    <button type="button" className={row} onClick={() => setKind(o.key as AnyMessageKey)}>
                       <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg", i === 0 ? "bg-primary-soft text-primary-text" : "bg-surface-2 text-ink-muted")}>
                         {i === 0 ? <Sparkles className="size-[18px]" /> : <MessageCircle className="size-[18px]" />}
                       </span>

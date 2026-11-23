@@ -56,8 +56,8 @@ export function MonthActions({ month, client, partners }: { month: Month; client
           open
           onOpenChange={(o) => !o && setSheet(null)}
           target={{
-            clientId: client.id, firmName: client.firm_name, phone: client.phone, whatsapp: client.whatsapp_phone, language: client.preferred_language,
-            month: entered ? { monthlyRecordId: month.monthly_record_id, figures, hasChallan: month.challans.length > 0, latestReceiptId: null } : undefined,
+            clientId: client.id, firmName: client.firm_name, phone: client.phone, whatsapp: client.whatsapp_phone, language: client.preferred_language, ownerName: client.owner_name,
+            month: { monthlyRecordId: month.monthly_record_id, figures, hasChallan: month.challans.length > 0, latestReceiptId: null },
           }}
         />
       )}

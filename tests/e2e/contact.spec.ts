@@ -50,3 +50,19 @@ test("phone: the call button on a board row opens Call / WhatsApp", async ({ pag
   await page.getByRole("button", { name: /^Call or WhatsApp / }).first().click();
   await expect(page.getByText("Send a ready message")).toBeVisible();
 });
+
+test("desktop: WhatsApp is on offer even before PF/ESIC is entered, and from the client list", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "desktop flow");
+  await signIn(page);
+  await page.goto("/?month=2026-11");
+  await page.getByRole("tab", { name: /^Amounts not entered/ }).click();
+  await page.getByRole("button", { name: /^Call or WhatsApp / }).first().click();
+  await page.getByRole("button", { name: /Ask for attendance and wages/ }).click();
+  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue(/हाज़िरी और वेतन|attendance and wages/);
+  await page.keyboard.press("Escape");
+
+  await page.goto("/clients");
+  await page.getByRole("button", { name: /^Call or WhatsApp / }).first().click();
+  await page.getByRole("button", { name: /Write your own message/ }).click();
+  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue(/(Namaste|नमस्ते)/);
+});
