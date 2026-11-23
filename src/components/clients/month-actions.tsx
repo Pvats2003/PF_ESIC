@@ -7,6 +7,10 @@ import { ChallanSheet, VerifyChallanSheet, type ChallanInfo, type ChallanMonth }
 import { challanFigures, ContactSheet } from "@/components/messages/contact-sheet";
 import type { MonthFigures } from "@/lib/domain/messages";
 import { PhoneCall } from "lucide-react";
+import { NextStepButton } from "@/components/board/next-step-button";
+import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
+import { ReminderSheet } from "@/components/messages/reminder-sheet";
+import { nextStep } from "@/lib/domain/next-step";
 import { Button } from "@/components/ui/button";
 import { useLang } from "@/components/providers/lang-provider";
 
@@ -15,7 +19,7 @@ type Month = ClientDetail["months"][number];
 /** Per-month actions on the client page: send reminder, add/correct challan, confirm a client's proof. */
 export function MonthActions({ month, client, partners }: { month: Month; client: ClientDetail["client"]; partners: ClientDetail["partners"] }) {
   const { t } = useLang();
-  const [sheet, setSheet] = useState<"contact" | "challan" | null>(null);
+  const [sheet, setSheet] = useState<"contact" | "challan" | "pay" | "remind" | null>(null);
   const [verifying, setVerifying] = useState<ChallanInfo | null>(null);
   if (month.legacy_settled) return null;
   const cm: ChallanMonth = {
@@ -30,14 +34,21 @@ export function MonthActions({ month, client, partners }: { month: Month; client
     charge_paise: month.charge_paise, extras_paise: month.extras_paise, owes: month.owes, overdue: month.overdue, ...challanFigures(month.challans),
   };
   const notify = { figures, phone: client.whatsapp_phone ?? client.phone, language: client.preferred_language };
+  // Challans and proof have their own buttons here; the next step covers amounts, reminders and payments.
+  const step = nextStep(month);
+  const showStep = step === "enter_amounts" || step === "remind" || step === "pay";
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex flex-wrap items-center justify-end gap-1">
+      {showStep && <NextStepButton step={step} month={month.wage_month} firmName={client.firm_name} handlers={{ onPay: () => setSheet("pay"), onRemind: () => setSheet("remind") }} />}
       {unverified.map((c) => (
-        <Button key={c.id} variant="soft" size="sm" onClick={() => setVerifying(c)}><ShieldCheck />Confirm {c.type.toUpperCase()}</Button>
+        <Button key={c.id} variant="soft" size="sm" onClick={() => setVerifying(c)}><ShieldCheck />{t("Confirm {type}", { type: c.type.toUpperCase() })}</Button>
       ))}
-      {entered && <Button variant="ghost" size="icon" className="size-9" aria-label={t("Add or correct challan")} title={t("Challan")} onClick={() => setSheet("challan")}><FileCheck2 /></Button>}
-      {entered && (month.owes > 0 || month.challan_payer === "client") && (
-        <Button variant="ghost" size="icon" className="size-9" aria-label={t("Call or WhatsApp {name}", { name: client.firm_name })} title={t("Call or WhatsApp")} onClick={() => setSheet("contact")}><PhoneCall /></Button>
+      {entered && <Button variant="ghost" size="sm" aria-label={t("Add or correct challan")} onClick={() => setSheet("challan")}><FileCheck2 />{t("Challan")}</Button>}
+      <Button variant="ghost" size="icon" className="size-9 text-ink-muted" aria-label={t("Call or WhatsApp {name}", { name: client.firm_name })} title={t("Call or WhatsApp")} onClick={() => setSheet("contact")}><PhoneCall /></Button>
+      {sheet === "pay" && <RecordPaymentSheet clientId={client.id} open onOpenChange={(o) => !o && setSheet(null)} />}
+      {sheet === "remind" && (
+        <ReminderSheet open onOpenChange={(o) => !o && setSheet(null)} clientId={client.id} monthlyRecordId={month.monthly_record_id}
+          phone={client.whatsapp_phone ?? client.phone} language={client.preferred_language} figures={figures} />
       )}
       {sheet === "challan" && <ChallanSheet month={cm} partners={partners} notify={notify} open onOpenChange={(o) => !o && setSheet(null)} initialType={month.pf_challan_status === "PENDING" ? "pf" : "esic"} />}
       {sheet === "contact" && (
@@ -46,7 +57,7 @@ export function MonthActions({ month, client, partners }: { month: Month; client
           onOpenChange={(o) => !o && setSheet(null)}
           target={{
             clientId: client.id, firmName: client.firm_name, phone: client.phone, whatsapp: client.whatsapp_phone, language: client.preferred_language,
-            month: { monthlyRecordId: month.monthly_record_id, figures, hasChallan: month.challans.length > 0, latestReceiptId: null },
+            month: entered ? { monthlyRecordId: month.monthly_record_id, figures, hasChallan: month.challans.length > 0, latestReceiptId: null } : undefined,
           }}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BadgeCheck, PhoneCall, X, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
+import { ArrowRight, BadgeCheck, CircleHelp, PhoneCall, X, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
 import { motion, useReducedMotion, type PanInfo } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,9 @@ import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
 import { useLang } from "@/components/providers/lang-provider";
 import { WalkInButton } from "@/components/walkin/walk-in-sheet";
+import { ChallanSheet, VerifyChallanSheet, type ChallanMonth } from "@/components/challan/challan-sheet";
+import { NextStepButton, type NextStepHandlers } from "./next-step-button";
+import { nextStep } from "@/lib/domain/next-step";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CountdownChip } from "@/components/ui/countdown-chip";
@@ -33,6 +36,11 @@ export function BoardView({ board }: { board: Board }) {
   const [payFor, setPayFor] = useState<string | null>(null);
   const [remindFor, setRemindFor] = useState<BoardRow | null>(null);
   const [contactFor, setContactFor] = useState<BoardRow | null>(null);
+  const [challanFor, setChallanFor] = useState<BoardRow | null>(null);
+  const [proofFor, setProofFor] = useState<BoardRow | null>(null);
+  const handlers = (r: BoardRow): NextStepHandlers => ({
+    onPay: () => setPayFor(r.client_id), onRemind: () => setRemindFor(r), onChallan: () => setChallanFor(r), onProof: () => setProofFor(r),
+  });
   const s = useMemo(() => summarize(board.rows), [board.rows]);
   const due = board.rows[0]?.due_date ?? dueDateFor(board.month, board.due_day);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, board.rows.filter((r) => matchesFilter(r, f.id)).length])), [board.rows]);
@@ -62,6 +70,8 @@ export function BoardView({ board }: { board: Board }) {
         </div>
       </div>
 
+      <Welcome />
+
       {board.rows.length === 0 ? (
         <Card className="mt-6">
           <EmptyState
@@ -77,20 +87,32 @@ export function BoardView({ board }: { board: Board }) {
 
           {/* ── Summary ─────────────────────────────────────── */}
           <section aria-label={t("Summary")} className="mt-6 grid gap-4 lg:grid-cols-[260px_1fr]">
-            <Card className="flex flex-row items-center gap-5 p-5 lg:flex-col lg:justify-center">
-              <MonthProgressRing closed={s.done} total={s.total} today={board.today} due={due} size={168} className="shrink-0" />
+            {/* Phone: one slim progress line instead of the ring */}
+            <Card className="p-4 md:hidden">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold">{s.done === s.total ? t("{month} is closed 🎉", { month: monthName }) : t("{n} clients still open", { n: s.total - s.done })}</span>
+                <span className="tabular text-sm text-ink-muted">{t("{done} of {n}", { done: s.done, n: s.total })}</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={s.total} aria-valuenow={s.done} aria-label={t("{closed} of {total} clients closed.", { closed: s.done, total: s.total })}>
+                <div className="h-full rounded-full bg-primary-text transition-[width] duration-500" style={{ width: `${s.total ? (s.done / s.total) * 100 : 0}%` }} />
+              </div>
+              {s.amountsPending > 0 && <div className="mt-1.5 text-xs text-ink-muted">{t("{n} without PF/ESIC amounts", { n: s.amountsPending })}</div>}
+            </Card>
+            <Card className="hidden flex-row items-center gap-5 p-4 sm:p-5 md:flex lg:flex-col lg:justify-center">
+              <MonthProgressRing closed={s.done} total={s.total} today={board.today} due={due} size={150} className="shrink-0" />
               <div className="lg:text-center">
                 <div className="text-sm font-semibold">{s.done === s.total ? t("{month} is closed 🎉", { month: monthName }) : t("{n} clients still open", { n: s.total - s.done })}</div>
                 <div className="mt-0.5 text-xs text-ink-muted">{s.amountsPending > 0 ? t("{n} without PF/ESIC amounts", { n: s.amountsPending }) : t("All amounts entered")}</div>
               </div>
             </Card>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {/* Phone: one swipeable row of figures, so the client list starts on the first screen */}
+            <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0 [&>*]:w-[42%] [&>*]:shrink-0 [&>*]:snap-start md:[&>*]:w-auto">
+              <StatCard icon={ShieldAlert} tone={s.pendingPaise > 0 ? "warning" : "success"} label={t("Owes")} paise={s.pendingPaise} hint={t(s.owingClients === 1 ? "{n} client" : "{n} clients", { n: s.owingClients })} />
+              <StatCard icon={Wallet} tone="success" label={t("Received")} paise={s.collectedPaise} hint={t("Against this month")} />
+              <StatCard icon={Send} tone={s.notNotified ? "danger" : "default"} label={t("Not notified")} count={s.notNotified} hint={s.notNotified ? t("send reminders") : t("everyone told")} />
+              <StatCard icon={FileCheck2} tone="success" label={t("Challans done")} count={s.challansDone} hint={t("of {n}", { n: s.total })} />
               <StatCard icon={Landmark} tone="primary" label="PF + ESIC" paise={s.pfPaise + s.esicPaise} hint={t("Government money")} />
               <StatCard icon={BadgeIndianRupee} label={t("Our fees")} paise={s.feesPaise} hint={t("Service charges + extras")} />
-              <StatCard icon={Wallet} tone="success" label={t("Received")} paise={s.collectedPaise} hint={t("Against this month")} />
-              <StatCard icon={ShieldAlert} tone={s.pendingPaise > 0 ? "warning" : "success"} label={t("Owes")} paise={s.pendingPaise} hint={t(s.owingClients === 1 ? "{n} client" : "{n} clients", { n: s.owingClients })} />
-              <StatCard icon={FileCheck2} tone="success" label={t("Challans done")} count={s.challansDone} hint={t("of {n}", { n: s.total })} />
-              <StatCard icon={Send} tone={s.notNotified ? "danger" : "default"} label={t("Not notified")} count={s.notNotified} hint={s.notNotified ? t("send reminders") : t("everyone told")} />
             </div>
           </section>
 
@@ -131,8 +153,8 @@ export function BoardView({ board }: { board: Board }) {
             </Card>
           ) : (
             <>
-              <DesktopTable rows={rows} onPay={setPayFor} onRemind={setRemindFor} onContact={setContactFor} />
-              <PhoneList rows={rows} onPay={setPayFor} onContact={setContactFor} />
+              <DesktopTable rows={rows} handlers={handlers} onContact={setContactFor} />
+              <PhoneList rows={rows} handlers={handlers} onPay={setPayFor} onContact={setContactFor} />
             </>
           )}
         </>
@@ -140,6 +162,15 @@ export function BoardView({ board }: { board: Board }) {
 
       {payFor && <RecordPaymentSheet clientId={payFor} open onOpenChange={(o) => !o && setPayFor(null)} />}
       {remindFor && <RowReminder row={remindFor} onClose={() => setRemindFor(null)} />}
+      {challanFor && (
+        <ChallanSheet month={challanMonth(challanFor)} partners={board.partners ?? []} open onOpenChange={(o) => !o && setChallanFor(null)}
+          initialType={challanFor.pf_challan_status === "PENDING" ? "pf" : "esic"}
+          notify={{ figures: { ...challanFor, firm_name_hi: null, ...challanFigures(challanFor.challans) }, phone: challanFor.whatsapp_phone ?? challanFor.phone, language: challanFor.preferred_language }} />
+      )}
+      {proofFor && (() => {
+        const c = (proofFor.challans ?? []).find((x) => x.paid_by === "client" && !x.verified);
+        return c ? <VerifyChallanSheet month={challanMonth(proofFor)} challan={c} open onOpenChange={(o) => !o && setProofFor(null)} /> : null;
+      })()}
       {contactFor && <ContactSheet target={contactTarget(contactFor)} open onOpenChange={(o) => !o && setContactFor(null)} />}
     </div>
   );
@@ -171,7 +202,7 @@ function StartMonthButton({ month, label, variant = "primary" }: { month: string
 
 function PartnerBadge({ code }: { code: "A" | "R" | null }) {
   const { t } = useLang();
-  if (!code) return <span className="text-xs text-ink-faint">N</span>;
+  if (!code) return null;
   return <Chip tone="primary" size="sm" className="h-5 px-1.5">{code === "A" ? t("Alok") : t("Rajeev")}</Chip>;
 }
 
@@ -179,6 +210,11 @@ const statusOf = (r: BoardRow): RecordStatus => r.overall_status as RecordStatus
 /** We pay the challan but PF/ESIC aren't in yet: the full amount owed isn't known. */
 const pendingAmounts = (r: BoardRow) => r.amount_status === "AMOUNTS_PENDING" && r.challan_payer === "us";
 const dash = <span className="text-ink-faint">—</span>;
+
+const challanMonth = (r: BoardRow): ChallanMonth => ({
+  monthly_record_id: r.monthly_record_id, client_id: r.client_id, wage_month: r.wage_month, challan_payer: r.challan_payer,
+  pf_paise: r.pf_paise, esic_paise: r.esic_paise, challans: r.challans,
+});
 
 /** Everything the Call / WhatsApp sheet needs about a board row. */
 export function contactTarget(r: BoardRow): ContactTarget {
@@ -205,7 +241,7 @@ export function RowReminder({ row, onClose, onSent }: { row: BoardRow; onClose: 
   );
 }
 
-function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void; onContact: (r: BoardRow) => void }) {
+function DesktopTable({ rows, handlers, onContact }: { rows: BoardRow[]; handlers: (r: BoardRow) => NextStepHandlers; onContact: (r: BoardRow) => void }) {
   const reduce = useReducedMotion();
   const { t } = useLang();
   const totals = summarize(rows);
@@ -222,8 +258,7 @@ function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; 
               <th className="text-right">{t("Due to us")}</th>
               <th className="text-right">{t("Received")}</th>
               <th className="text-right">{t("Owes")}</th>
-              <th className="text-left">{t("Status")}</th>
-              <th className="w-32"><span className="sr-only">{t("Actions")}</span></th>
+              <th className="text-left">{t("Next step")}</th>
             </tr>
           </thead>
           <tbody>
@@ -241,8 +276,8 @@ function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; 
                       <span className="truncate font-semibold text-ink group-hover:text-primary-text">{r.firm_name}</span>
                       <PartnerBadge code={r.partner_code} />
                     </span>
-                    <span className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
-                      {r.owner_name ?? t("Owner not added")}
+                    <span className="mt-1 flex items-center gap-1.5 text-xs whitespace-nowrap text-ink-muted" title={r.owner_name ?? undefined}>
+                      <StatusChip status={statusOf(r)} size="sm" />
                       {r.challan_payer === "client" && <ClientPaysChip />}
                     </span>
                   </Link>
@@ -253,21 +288,16 @@ function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; 
                 <td className="tabular text-right">{r.amount_status === "AMOUNTS_PENDING" && r.challan_payer === "us" ? dash : <Money paise={r.due_to_us} size="sm" />}</td>
                 <td className="tabular text-right">{r.received ? <Money paise={r.received} size="sm" tone="success" /> : dash}</td>
                 <td className="tabular text-right">{pendingAmounts(r) ? dash : r.owes ? <Money paise={r.owes} size="sm" tone={r.overdue ? "danger" : "warning"} /> : dash}</td>
-                <td><StatusChip status={statusOf(r)} size="sm" /></td>
-                <td className="text-right whitespace-nowrap">
-                  {r.amount_status === "ENTERED" && (r.owes > 0 || r.challan_payer === "client") && r.overall_status !== "DONE" && (
-                    <Button variant="ghost" size="icon" aria-label={t("Send reminder to {name}", { name: r.firm_name })} title={t("Send reminder")} onClick={() => onRemind(r)} className="size-9">
-                      <Send />
+                <td className="whitespace-nowrap">
+                  <span className="flex items-center gap-1">
+                    {(() => { const step = nextStep(r); return step ? <NextStepButton step={step} month={r.wage_month} receiptId={r.latest_receipt_id} firmName={r.firm_name} handlers={handlers(r)} /> : <span className="px-2 text-xs font-medium text-success">✓ {t("All done")}</span>; })()}
+                    {r.owes > 0 && nextStep(r) !== "pay" && (
+                      <Button variant="ghost" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} title={t("Record payment")} onClick={handlers(r).onPay} className="ml-auto size-9 text-ink-muted"><Wallet /></Button>
+                    )}
+                    <Button variant="ghost" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} title={t("Call or WhatsApp")} onClick={() => onContact(r)} className={cn("size-9 text-ink-muted", !(r.owes > 0 && nextStep(r) !== "pay") && "ml-auto")}>
+                      <PhoneCall />
                     </Button>
-                  )}
-                  <Button variant="ghost" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} title={t("Call or WhatsApp")} onClick={() => onContact(r)} className="size-9">
-                    <PhoneCall />
-                  </Button>
-                  {r.owes > 0 && (
-                    <Button variant="ghost" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={() => onPay(r.client_id)} className="size-9">
-                      <Wallet />
-                    </Button>
-                  )}
+                  </span>
                 </td>
               </motion.tr>
             ))}
@@ -281,7 +311,7 @@ function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; 
               <td />
               <td className="text-right"><Money paise={totals.collectedPaise} size="sm" /></td>
               <td className="text-right"><Money paise={totals.pendingPaise} size="sm" /></td>
-              <td colSpan={2} />
+              <td />
             </tr>
           </tfoot>
         </table>
@@ -290,7 +320,7 @@ function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; 
   );
 }
 
-function PhoneList({ rows, onPay, onContact }: { rows: BoardRow[]; onPay: (id: string) => void; onContact: (r: BoardRow) => void }) {
+function PhoneList({ rows, handlers, onPay, onContact }: { rows: BoardRow[]; handlers: (r: BoardRow) => NextStepHandlers; onPay: (id: string) => void; onContact: (r: BoardRow) => void }) {
   const [hint, setHint] = useState(false);
   const { t, lang } = useLang();
   useEffect(() => {
@@ -315,7 +345,7 @@ function PhoneList({ rows, onPay, onContact }: { rows: BoardRow[]; onPay: (id: s
       )}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-hairline">
-          {rows.map((r) => <SwipeRow key={r.monthly_record_id} r={r} onPay={() => { seen(); onPay(r.client_id); }} onContact={() => { seen(); onContact(r); }} />)}
+          {rows.map((r) => <SwipeRow key={r.monthly_record_id} r={r} handlers={handlers(r)} onPay={() => { seen(); onPay(r.client_id); }} onContact={() => { seen(); onContact(r); }} />)}
         </ul>
       </Card>
     </div>
@@ -324,10 +354,11 @@ function PhoneList({ rows, onPay, onContact }: { rows: BoardRow[]; onPay: (id: s
 
 const SWIPE = 90;
 
-function SwipeRow({ r, onPay, onContact }: { r: BoardRow; onPay: () => void; onContact: () => void }) {
+function SwipeRow({ r, handlers, onPay, onContact }: { r: BoardRow; handlers: NextStepHandlers; onPay: () => void; onContact: () => void }) {
   const reduce = useReducedMotion();
   const { t } = useLang();
   const canPay = r.owes > 0;
+  const step = nextStep(r);
   // A swipe must not also count as a tap on the client's name (which would open the client page).
   const dragged = useRef(false);
   const onDragEnd = (_: unknown, info: PanInfo) => {
@@ -353,8 +384,9 @@ function SwipeRow({ r, onPay, onContact }: { r: BoardRow; onPay: () => void; onC
         dragElastic={{ left: 0.6, right: canPay ? 0.6 : 0.1 }}
         onDragStart={() => (dragged.current = true)}
         onDragEnd={onDragEnd}
-        className="relative flex touch-pan-y items-center gap-3 bg-surface px-4 py-3"
+        className="relative touch-pan-y bg-surface px-4 py-3"
       >
+       <div className="flex items-start gap-3">
         <Link href={`/clients/${r.client_id}`} className="min-w-0 flex-1" draggable={false} onClickCapture={blockTapAfterSwipe}>
           <span className="line-clamp-2 text-base leading-snug font-semibold">{r.firm_name}</span>
           <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -366,14 +398,41 @@ function SwipeRow({ r, onPay, onContact }: { r: BoardRow; onPay: () => void; onC
           {pendingAmounts(r) ? <span className="text-sm text-ink-faint">—</span> : r.owes ? <Money paise={r.owes} size="md" tone={r.overdue ? "danger" : "default"} /> : <Money paise={r.received} size="md" tone="success" />}
           <div className="text-xs text-ink-faint">{t(pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due")}</div>
         </div>
-        <Button variant="ghost" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} onClick={onContact} className="-mx-1 text-ink-muted"><PhoneCall /></Button>
-        {canPay ? (
-          <Button variant="soft" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={onPay}><Wallet /></Button>
-        ) : (
-          <Link href={`/clients/${r.client_id}`} aria-label={t("Open {name}", { name: r.firm_name })} className="grid size-11 place-items-center text-ink-faint"><ArrowRight className="size-4" /></Link>
-        )}
+       </div>
+       <div className="mt-2.5 flex items-center gap-2">
+        {step
+          ? <NextStepButton step={step} month={r.wage_month} receiptId={r.latest_receipt_id} firmName={r.firm_name} handlers={handlers} size="md" className="flex-1" />
+          : <Link href={`/clients/${r.client_id}`} className="flex h-11 flex-1 items-center gap-1 text-sm font-medium text-success">✓ {t("All done")}<ArrowRight className="ml-auto size-4 text-ink-faint" /></Link>}
+        {canPay && step !== "pay" && <Button variant="secondary" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={onPay}><Wallet /></Button>}
+        <Button variant="secondary" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} onClick={onContact}><PhoneCall /></Button>
+       </div>
       </motion.div>
     </li>
+  );
+}
+
+/** First visits: one quiet pointer to the five-step guide. Hidden for good once closed or opened. */
+function Welcome() {
+  const { t } = useLang();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShow(localStorage.getItem("pfesic:welcome") !== "seen");
+    } catch {}
+  }, []);
+  const seen = () => {
+    setShow(false);
+    try { localStorage.setItem("pfesic:welcome", "seen"); } catch {}
+  };
+  if (!show) return null;
+  return (
+    <div className="mt-5 flex items-center gap-3 rounded-2xl bg-primary-soft px-4 py-3 text-sm text-primary-text">
+      <CircleHelp className="size-5 shrink-0" />
+      <span className="flex-1">{t("New here? See how the month works in five simple steps.")}</span>
+      <Button asChild size="sm" onClick={seen}><Link href="/help">{t("How it works")}</Link></Button>
+      <button onClick={seen} aria-label={t("Close")} className="grid size-9 place-items-center rounded-lg"><X className="size-4" /></button>
+    </div>
   );
 }
 

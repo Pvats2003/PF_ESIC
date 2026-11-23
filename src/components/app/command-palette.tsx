@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { Phone, BarChart3, CalendarPlus, CalendarRange, FileSpreadsheet, Keyboard, ListTodo, Search, Settings, UserRound, UserRoundPlus, Users, Wallet } from "lucide-react";
+import { CircleHelp, Phone, BarChart3, CalendarPlus, CalendarRange, FileSpreadsheet, Keyboard, ListTodo, Search, Settings, UserRound, UserRoundPlus, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -23,6 +23,7 @@ const PAGES: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/clients/phones", label: "Client phones", icon: Phone },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/help", label: "How it works", icon: CircleHelp },
 ];
 
 /** ⌘K / Ctrl+K: jump to any client by any spelling, any page, or start an action. */

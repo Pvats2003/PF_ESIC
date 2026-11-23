@@ -73,13 +73,13 @@ test.describe("desktop", () => {
     await page.goto("/?month=2026-10");
     const paidRow = page.getByRole("row").filter({ has: page.locator("td:nth-child(6) span.tabular") }).first();
     await paidRow.getByRole("link").first().click();
-    const payment = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: /^Void payment of/ }) }).first();
-    await payment.getByRole("button", { name: /^Void payment of/ }).click();
-    await expect(page.getByRole("button", { name: "Void payment", exact: true })).toBeDisabled(); // reason required
+    const payment = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: /^Cancel payment of/ }) }).first();
+    await payment.getByRole("button", { name: /^Cancel payment of/ }).click();
+    await expect(page.getByRole("button", { name: "Cancel payment", exact: true })).toBeDisabled(); // reason required
     await page.getByLabel("Why?").fill("entered for the wrong client");
-    await page.getByRole("button", { name: "Void payment", exact: true }).click();
-    await expect(page.getByText("Payment voided")).toBeVisible();
-    await expect(page.getByText(/Void: entered for the wrong client/)).toBeVisible();
+    await page.getByRole("button", { name: "Cancel payment", exact: true }).click();
+    await expect(page.getByText("Payment cancelled")).toBeVisible();
+    await expect(page.getByText(/Cancelled: entered for the wrong client/)).toBeVisible();
   });
 });
 

@@ -44,10 +44,14 @@ export function QueueView({ boards }: { boards: Board[] }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      {/* Phone: the current client first, categories below. Desktop: categories on the left. */}
+      {/* Phone: title, then the current client, categories below. Desktop: title and categories on the left. */}
+      <div className="lg:hidden">
+        <h1 className="text-xl font-semibold tracking-[-0.02em]">{t("Today")}</h1>
+        <p className="mt-1 text-sm text-ink-muted">{items.length ? t("{n} things to do, most urgent first.", { n: items.length - done.size }) : t("Nothing waiting.")}</p>
+      </div>
       <aside className="order-2 space-y-3 lg:order-1">
-        <div>
-          <h1 className="text-xl font-semibold tracking-[-0.02em]">{t("Today")}</h1>
+        <div className="hidden lg:block">
+          <h2 className="text-xl font-semibold tracking-[-0.02em]">{t("Today")}</h2>
           <p className="mt-1 text-sm text-ink-muted">{items.length ? t("{n} things to do, most urgent first.", { n: items.length - done.size }) : t("Nothing waiting.")}</p>
         </div>
         <WalkInButton variant="soft" />

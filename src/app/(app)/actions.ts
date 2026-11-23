@@ -14,6 +14,22 @@ const uuid = z.string().uuid();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const paise = z.number().int().nonnegative().max(1_00_00_00_000_00); // up to ₹100 crore
 
+/**
+ * The first validation problem, in words a person understands. Messages we wrote
+ * ourselves pass through; zod's built-in ones ("Too big: expected number to be <=28")
+ * become plain sentences.
+ */
+function firstError(err: z.ZodError, fallback: string): string {
+  const i = err.issues[0];
+  if (!i) return fallback;
+  if (i.code === "custom") return i.message;
+  const own = !/^(Too (big|small)|Invalid|Expected|Required)/i.test(i.message);
+  if (own) return i.message;
+  if (i.code === "too_big") return i.origin === "string" ? "That's too long. Please shorten it." : "That number is too big.";
+  if (i.code === "too_small") return i.origin === "string" ? "This can't be empty." : "That number is too small.";
+  return fallback;
+}
+
 function friendly(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   // Database messages are written for people already; strip technical prefixes.
@@ -97,7 +113,7 @@ export interface PaymentResult {
 
 export async function recordPayment(input: z.infer<typeof paymentSchema>): Promise<ActionResult<PaymentResult>> {
   const v = paymentSchema.safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the payment details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the payment details") };
   const d = v.data;
   return run(async () => {
     const db = await requireDb();
@@ -182,7 +198,7 @@ export type ClientInput = z.input<typeof clientSchema>;
 export async function saveClient(clientId: string | null, input: ClientInput): Promise<ActionResult<string>> {
   if (clientId !== null && !uuid.safeParse(clientId).success) return { ok: false, error: "Unknown client" };
   const v = clientSchema.safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     const id = await (await requireDb()).rpc<string>("save_client", { p_client_id: clientId, p_data: v.data });
     revalidatePath("/clients");
@@ -197,7 +213,7 @@ const phonesSchema = z.object({ clientId: uuid, phone: phoneField, whatsapp: pho
 /** Fast phone entry: only the phone and WhatsApp number change. Returns the stored (normalised) numbers. */
 export async function setClientPhones(input: z.input<typeof phonesSchema>): Promise<ActionResult<{ phone: string | null; whatsapp: string | null }>> {
   const v = phonesSchema.safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     await (await requireDb()).rpc("set_client_phones", { p_client_id: v.data.clientId, p_phone: v.data.phone, p_whatsapp: v.data.whatsapp });
     revalidatePath("/clients");
@@ -232,7 +248,7 @@ const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 export async function saveChallan(form: FormData): Promise<ActionResult<string>> {
   const raw = JSON.parse(String(form.get("data") ?? "{}"));
   const v = challanSchema.safeParse(raw);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the challan details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the challan details") };
   const d = v.data;
   if (d.paidBy === "us" && !d.partnerId) return { ok: false, error: "Choose who paid the challan" };
   if (d.replacesId && !d.replaceReason) return { ok: false, error: "Say why the challan is being corrected" };
@@ -298,14 +314,14 @@ const settingsSchema = z.object({
       return n ?? "";
     }),
   ),
-  due_day: z.number().int().min(1).max(28),
-  reminder_days: z.array(z.number().int().min(0).max(20)).max(4),
+  due_day: z.number({ error: "Due day must be a number from 1 to 28" }).int("Due day must be a number from 1 to 28").min(1, "Due day must be a number from 1 to 28").max(28, "Due day must be a number from 1 to 28"),
+  reminder_days: z.array(z.number().int().min(0, "Reminder days are 0 to 20").max(20, "Reminder days are 0 to 20")).max(4, "Up to 4 reminder days"),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;
 
 export async function saveSettings(input: SettingsInput): Promise<ActionResult<true>> {
   const v = settingsSchema.safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     await (await requireDb()).rpc("save_settings", { p_data: v.data });
     revalidatePath("/settings");
@@ -316,7 +332,7 @@ export async function saveSettings(input: SettingsInput): Promise<ActionResult<t
 const TEMPLATE_KEYS = ["dues_we_pay", "challan_ready_client_pays", "payment_received", "challan_filed", "overdue"] as const;
 export async function saveTemplate(key: string, language: string, body: string): Promise<ActionResult<true>> {
   const v = z.object({ key: z.enum(TEMPLATE_KEYS), language: z.enum(["hi", "en"]), body: z.string().trim().min(1, "A message can't be empty").max(2000) }).safeParse({ key, language, body });
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the message" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the message") };
   return run(async () => {
     await (await requireDb()).rpc("save_template", { p_key: v.data.key, p_language: v.data.language, p_body: v.data.body });
     return true as const;
@@ -335,7 +351,7 @@ export async function setSplit(effectiveFrom: string, alok: number, rajeev: numb
 
 export async function voidPayment(paymentId: string, clientId: string, reason: string): Promise<ActionResult<true>> {
   const v = z.object({ p: uuid, c: uuid, reason: z.string().trim().min(3, "Say why it's being voided").max(200) }).safeParse({ p: paymentId, c: clientId, reason });
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     await (await requireDb()).rpc("void_payment", { p_payment_id: v.data.p, p_reason: v.data.reason });
     revalidatePath(`/clients/${v.data.c}`);
@@ -346,7 +362,7 @@ export async function voidPayment(paymentId: string, clientId: string, reason: s
 
 export async function reissueReceipt(receiptId: string, reason: string, language: "hi" | "en"): Promise<ActionResult<{ receipt_id: string; receipt_no: string }>> {
   const v = z.object({ r: uuid, reason: z.string().trim().min(3, "Say why it's being reissued").max(200), l: z.enum(["hi", "en"]) }).safeParse({ r: receiptId, reason, l: language });
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => (await requireDb()).rpc<{ receipt_id: string; receipt_no: string }>("reissue_receipt", { p_receipt_id: v.data.r, p_reason: v.data.reason, p_language: v.data.l }));
 }
 
@@ -369,7 +385,7 @@ export interface WalkInResult { client_id: string; extra_charge_id: string; paym
 
 export async function recordWalkIn(input: WalkInInput): Promise<ActionResult<WalkInResult>> {
   const v = walkInSchema.safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     const r = await (await requireDb()).rpc<WalkInResult>("record_walk_in", { p_data: { ...v.data, received_by_code: v.data.partner_code } });
     revalidatePath("/");
@@ -380,7 +396,7 @@ export async function recordWalkIn(input: WalkInInput): Promise<ActionResult<Wal
 
 export async function addExpense(input: { spentOn: string; amountPaise: number; description: string; paidBy: "A" | "R" }): Promise<ActionResult<string>> {
   const v = z.object({ spentOn: isoDate, amountPaise: z.number().int().positive("Enter the amount"), description: z.string().trim().min(2, "Say what it was for").max(200), paidBy: z.enum(["A", "R"]) }).safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     const id = await (await requireDb()).rpc<string>("add_expense", { p_spent_on: v.data.spentOn, p_amount_paise: v.data.amountPaise, p_description: v.data.description, p_paid_by_code: v.data.paidBy });
     revalidatePath("/reports");
@@ -390,7 +406,7 @@ export async function addExpense(input: { spentOn: string; amountPaise: number; 
 
 export async function addTransfer(input: { from: "A" | "R"; to: "A" | "R"; amountPaise: number; on: string; kind: "settlement" | "gov_handover"; note: string }): Promise<ActionResult<string>> {
   const v = z.object({ from: z.enum(["A", "R"]), to: z.enum(["A", "R"]), amountPaise: z.number().int().positive("Enter the amount"), on: isoDate, kind: z.enum(["settlement", "gov_handover"]), note: z.string().trim().max(200) }).safeParse(input);
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   if (v.data.from === v.data.to) return { ok: false, error: "Choose two different partners" };
   return run(async () => {
     const id = await (await requireDb()).rpc<string>("add_partner_transfer", { p_from_code: v.data.from, p_to_code: v.data.to, p_amount_paise: v.data.amountPaise, p_on: v.data.on, p_kind: v.data.kind, p_note: v.data.note });
@@ -401,7 +417,7 @@ export async function addTransfer(input: { from: "A" | "R"; to: "A" | "R"; amoun
 
 export async function voidMoneyMove(kind: "expense" | "transfer", id: string, reason: string): Promise<ActionResult<true>> {
   const v = z.object({ kind: z.enum(["expense", "transfer"]), id: uuid, reason: z.string().trim().min(3, "Give a reason").max(200) }).safeParse({ kind, id, reason });
-  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  if (!v.success) return { ok: false, error: firstError(v.error, "Check the details") };
   return run(async () => {
     await (await requireDb()).rpc("void_money_move", { p_kind: v.data.kind, p_id: v.data.id, p_reason: v.data.reason });
     revalidatePath("/reports");

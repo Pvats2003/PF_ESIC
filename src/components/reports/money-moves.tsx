@@ -72,19 +72,19 @@ function Row({ kind, id, title, sub, amount, voided, reason }: { kind: "expense"
     <li className={cn("flex items-center gap-3 px-5 py-3", voided && "opacity-60")}>
       <div className="min-w-0 flex-1">
         <div className={cn("truncate font-medium", voided && "line-through")}>{title}</div>
-        <div className="truncate text-xs text-ink-muted">{sub}{voided ? ` · ${t("Void")}: ${reason}` : ""}</div>
+        <div className="truncate text-xs text-ink-muted">{sub}{voided ? ` · ${t("Cancelled")}: ${reason}` : ""}</div>
       </div>
       <Money paise={amount} size="md" className={cn(voided && "line-through")} />
-      {!voided && <Button variant="ghost" size="icon" className="size-9" aria-label={t("Void {name}", { name: title })} onClick={() => setOpen(true)}><Ban /></Button>}
+      {!voided && <Button variant="ghost" size="icon" className="size-9" aria-label={t("Cancel {name}", { name: title })} onClick={() => setOpen(true)}><Ban /></Button>}
       {open && (
-        <BottomSheet open onOpenChange={setOpen} title={t("Void “{name}”?", { name: title })} description={t("It stays in history marked void and stops counting in the settlement.")}
+        <BottomSheet open onOpenChange={setOpen} title={t("Cancel “{name}”?", { name: title })} description={t("It stays in history marked cancelled and stops counting in the settlement.")}
           footer={<Button variant="danger" size="lg" block disabled={pending || why.trim().length < 3} onClick={() => start(async () => {
             const r = await voidMoneyMove(kind, id, why);
-            if (!r.ok) return void toast.error(t("Not voided"), { description: t(r.error) });
-            toast.success(t("Voided"));
+            if (!r.ok) return void toast.error(t("Not cancelled"), { description: t(r.error) });
+            toast.success(t("Cancelled"));
             setOpen(false);
             router.refresh();
-          })}><Ban />{pending ? t("Voiding…") : t("Void")}</Button>}>
+          })}><Ban />{pending ? t("Cancelling…") : t("Cancel")}</Button>}>
           <Label htmlFor={`why-${id}`}>{t("Why?")}</Label>
           <Input id={`why-${id}`} value={why} onChange={(e) => setWhy(e.target.value)} placeholder={t("e.g. entered twice")} autoFocus />
         </BottomSheet>

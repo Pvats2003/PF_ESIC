@@ -41,6 +41,11 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   on every board row (desktop icon, phone icon + swipe left), client-page months and Today: call, chat, and any ready
   message with the suggested one first; adds a phone inline if missing. After saving a challan we paid: "Tell the client"
   (challan_filed message). Fast phone entry `/clients/phones` (`set_client_phones`, update 6 = 20261129).
+- **Ease-of-use pass: done.** Labelled "Next step" per client month (`src/lib/domain/next-step.ts`, board desktop column,
+  phone rows, client page), phone summary as one slim line + swipeable figures, client page month cards on phones,
+  `/help` five-step guide + one-time welcome pointer, friendly 404, plain validation messages (`firstError` in actions),
+  extra-over-owed needs a tick before it becomes advance, duplicate-name warning when adding a client.
+  UI says "Cancel/Cancelled" (never "Void"); no "N" partner badge.
 - **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
   update 4 = 20261127, update 5 = 20261128, update 6 = 20261129). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
 - Reports read `live_ledger` (financial_ledger minus legacy_settled months and minus voided entries and their reversals), so imported history never distorts

@@ -21,28 +21,28 @@ export function VoidPaymentButton({ paymentId, clientId, amount, receiptNo }: { 
   const [pending, start] = useTransition();
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} aria-label={t("Void payment of {amount}", { amount: formatINR(amount) })}><Ban />{t("Void")}</Button>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)} aria-label={t("Cancel payment of {amount}", { amount: formatINR(amount) })}><Ban />{t("Cancel payment")}</Button>
       {open && (
         <BottomSheet
           open
           onOpenChange={setOpen}
-          title={t("Void {amount} payment?", { amount: formatINR(amount) })}
-          description={receiptNo ? t("Receipt {no} becomes void too", { no: receiptNo }) : undefined}
+          title={t("Cancel the {amount} payment?", { amount: formatINR(amount) })}
+          description={receiptNo ? t("Receipt {no} is cancelled too", { no: receiptNo }) : undefined}
           footer={
             <Button variant="danger" size="lg" block disabled={pending || reason.trim().length < 3} onClick={() => start(async () => {
               const r = await voidPayment(paymentId, clientId, reason);
-              if (!r.ok) return void toast.error(t("Not voided"), { description: t(r.error) });
-              toast.success(t("Payment voided"), { description: t("{amount} is owed again. Record it again if it was entered wrongly.", { amount: formatINR(amount) }) });
+              if (!r.ok) return void toast.error(t("Not cancelled"), { description: t(r.error) });
+              toast.success(t("Payment cancelled"), { description: t("{amount} is owed again. Record it again if it was entered wrongly.", { amount: formatINR(amount) }) });
               setOpen(false);
               router.refresh();
             })}>
-              <Ban />{pending ? t("Voiding…") : t("Void payment")}
+              <Ban />{pending ? t("Cancelling…") : t("Cancel payment")}
             </Button>
           }
         >
           <div className="space-y-4">
             <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger ring-1 ring-danger-line ring-inset">
-              {t("Use this when a payment was entered wrongly (wrong client, wrong amount). The payment and its receipt stay in history marked void; nothing is deleted. This can't be undone.")}
+              {t("Use this when a payment was entered wrongly (wrong client, wrong amount). The payment and its receipt stay in history marked cancelled; nothing is deleted. This can't be undone.")}
             </p>
             <div>
               <Label htmlFor="void-reason">{t("Why?")}</Label>
@@ -71,12 +71,12 @@ export function ReissueReceiptButton({ receiptId, receiptNo, language }: { recei
           open
           onOpenChange={setOpen}
           title={t("Reissue receipt")}
-          description={t("{no} becomes void; a new number is issued", { no: receiptNo })}
+          description={t("{no} is cancelled; a new number is issued", { no: receiptNo })}
           footer={
             <Button size="lg" block disabled={pending || reason.trim().length < 3} onClick={() => start(async () => {
               const r = await reissueReceipt(receiptId, reason, lang);
               if (!r.ok) return void toast.error(t("Not reissued"), { description: t(r.error) });
-              toast.success(t("New receipt {no}", { no: r.data.receipt_no }), { description: t("{no} is now void.", { no: receiptNo }) });
+              toast.success(t("New receipt {no}", { no: r.data.receipt_no }), { description: t("{no} is now cancelled.", { no: receiptNo }) });
               router.push(`/receipts/${r.data.receipt_id}`);
             })}>
               <RotateCcw />{pending ? t("Reissuing…") : t("Reissue receipt")}

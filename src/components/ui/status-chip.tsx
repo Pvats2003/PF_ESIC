@@ -31,7 +31,7 @@ export const STATUS_META: Record<RecordStatus, { label: string; labelHi: string;
   CHALLAN_PAID: { label: "Challan paid", labelHi: "चालान जमा", tone: "success", icon: FileCheck2 },
   CLOSED: { label: "Done", labelHi: "पूर्ण", tone: "success", icon: CircleCheck },
   OVERDUE: { label: "Overdue", labelHi: "अतिदेय", tone: "danger", icon: TriangleAlert },
-  VOID: { label: "Void", labelHi: "रद्द", tone: "neutral", icon: Ban },
+  VOID: { label: "Cancelled", labelHi: "रद्द", tone: "neutral", icon: Ban },
   NOT_NOTIFIED: { label: "Not notified", labelHi: "सूचना बाकी", tone: "neutral", icon: Send },
   PAYMENT_PENDING: { label: "Payment pending", labelHi: "भुगतान बाकी", tone: "warning", icon: Clock3 },
   CHALLAN_PENDING: { label: "Challan pending", labelHi: "चालान बाकी", tone: "warning", icon: Landmark },

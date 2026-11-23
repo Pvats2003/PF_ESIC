@@ -74,6 +74,7 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
   const [receivedOn, setReceivedOn] = useState(todayIST());
   const [reference, setReference] = useState("");
   const [months, setMonths] = useState<string[]>(detail.open_months.map((m) => m.monthly_record_id));
+  const [extraOk, setExtraOk] = useState(false); // an advance must be meant, not a typo
 
   const advanceUsable = Math.min(advance, owes);
   const toCollect = Math.max(owes - (useAdvance ? advanceUsable : 0), 0);
@@ -94,6 +95,7 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
     if (amountPaise === null || amountPaise <= 0) return toast.error(t("Enter the amount received"));
     if (!receivedBy) return toast.error(t("Choose who received the money"));
     if (detail.open_months.length && months.length === 0) return toast.error(t("Choose at least one month, or keep it all as advance"));
+    if (extra > 0 && !extraOk) return toast.error(t("Tick the box to keep the extra as advance, or correct the amount"));
     start(async () => {
       const r = await recordPayment({
         idempotencyKey: key.current, clientId: detail.client.id, amountPaise, receivedOn, mode, receivedBy,
@@ -130,21 +132,27 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
         <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl p-3 ring-1 transition-colors ring-inset", useAdvance ? "bg-primary-soft ring-primary-text/30" : "bg-surface ring-hairline")}>
           <input type="checkbox" className="mt-1 size-5 accent-[var(--primary)]" checked={useAdvance} onChange={(e) => toggleAdvance(e.target.checked)} />
           <span>
-            <span className="block font-semibold">Use {formatINR(advanceUsable)} advance?</span>
-            <span className="block text-sm text-ink-muted">It goes against the oldest dues first. Then {formatINR(toCollect)} is left to collect.</span>
+            <span className="block font-semibold">{t("Use {amount} advance?", { amount: formatINR(advanceUsable) })}</span>
+            <span className="block text-sm text-ink-muted">{t("It goes against the oldest dues first. Then {amount} is left to collect.", { amount: formatINR(toCollect) })}</span>
           </span>
         </label>
       )}
 
       <div>
         <Label htmlFor="pay-amount">{t("Amount received now")}</Label>
-        <MoneyInput id="pay-amount" fieldSize="lg" value={amount} onChange={(e) => { setAmount(e.target.value); setTouched(true); }} aria-invalid={amount !== "" && amountPaise === null} autoFocus />
+        <MoneyInput id="pay-amount" fieldSize="lg" value={amount} onChange={(e) => { setAmount(e.target.value); setTouched(true); setExtraOk(false); }} aria-invalid={amount !== "" && amountPaise === null} autoFocus />
         {amount !== "" && amountPaise === null ? (
           <FieldHint error>{t("Enter an amount like 1,500 or 1500.50")}</FieldHint>
         ) : extra > 0 ? (
-          <FieldHint>{formatINR(extra)} more than the chosen months owe: it will be kept as advance.</FieldHint>
+          <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl bg-warning-soft p-3 text-sm ring-1 ring-warning-line ring-inset">
+            <input type="checkbox" className="mt-0.5 size-5 accent-[var(--primary)]" checked={extraOk} onChange={(e) => setExtraOk(e.target.checked)} />
+            <span>
+              <span className="block font-semibold text-warning">{t("This is {amount} more than they owe", { amount: formatINR(extra) })}</span>
+              <span className="block text-ink-muted">{t("Tick if they really paid extra: it is kept as advance for later months. Otherwise correct the amount.")}</span>
+            </span>
+          </label>
         ) : amountPaise !== null && amountPaise < coverable ? (
-          <FieldHint>Part payment: {formatINR(coverable - amountPaise)} will still be owed.</FieldHint>
+          <FieldHint>{t("Part payment: {amount} will still be owed.", { amount: formatINR(coverable - amountPaise) })}</FieldHint>
         ) : null}
       </div>
 
@@ -187,7 +195,7 @@ function PaymentForm({ detail, onDone }: { detail: ClientDetail; onDone: (r: Pay
         </fieldset>
       )}
 
-      <Button type="submit" size="lg" block disabled={pending || amountPaise === null || amountPaise <= 0}>
+      <Button type="submit" size="lg" block disabled={pending || amountPaise === null || amountPaise <= 0 || (extra > 0 && !extraOk)}>
         <Check />
         {pending ? t("Saving…") : amountPaise ? t("Save {amount} and issue receipt", { amount: formatINR(amountPaise) }) : t("Save and issue receipt")}
       </Button>
@@ -227,12 +235,12 @@ function Success({ result }: { result: PaymentResult }) {
   );
 }
 
-export function RecordPaymentButton({ clientId, label = "Record payment" }: { clientId: string; label?: string }) {
+export function RecordPaymentButton({ clientId, label = "Record payment", className }: { clientId: string; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const { t } = useLang();
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Wallet />{t(label)}</Button>
+      <Button onClick={() => setOpen(true)} className={className}><Wallet />{t(label)}</Button>
       {open && <RecordPaymentSheet clientId={clientId} open={open} onOpenChange={setOpen} />}
     </>
   );

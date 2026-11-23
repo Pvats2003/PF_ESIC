@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CalendarRange, Keyboard, ListTodo, Menu, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarRange, CircleHelp, Keyboard, ListTodo, Menu, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLang } from "@/components/providers/lang-provider";
@@ -13,12 +13,13 @@ export const NAV = [
   { href: "/clients", label: "Clients", icon: Users, match: (p: string) => p.startsWith("/clients") },
   { href: "/reports", label: "Reports", icon: BarChart3, match: (p: string) => p.startsWith("/reports") },
   { href: "/settings", label: "Settings", icon: Settings, match: (p: string) => p.startsWith("/settings") },
+  { href: "/help", label: "How it works", icon: CircleHelp, match: (p: string) => p.startsWith("/help") },
 ] as const;
 
 /** Phone tabs: the daily four, everything else under More. */
 const TABS = [
   NAV[0], NAV[1], NAV[3], NAV[4],
-  { href: "/more", label: "More", icon: Menu, match: (p: string) => p.startsWith("/more") || p.startsWith("/settings") || p.startsWith("/entry") },
+  { href: "/more", label: "More", icon: Menu, match: (p: string) => p.startsWith("/more") || p.startsWith("/settings") || p.startsWith("/entry") || p.startsWith("/help") },
 ] as const;
 
 /** Highlights the current page. Reads the URL, so it renders inside <Suspense> (see AppShell). */

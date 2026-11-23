@@ -44,24 +44,25 @@ export function ClientView({ d }: { d: ClientDetail }) {
           <h1 className="text-xl font-semibold tracking-[-0.02em]">{c.firm_name}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
             <span>{c.owner_name ?? t("Owner not added")}</span>
-            {c.partner_code ? <Chip tone="primary" size="sm">{t(c.partner_name ?? "")}</Chip> : <Chip size="sm">{t("No charge (N)")}</Chip>}
+            {c.partner_code ? <Chip tone="primary" size="sm">{t(c.partner_name ?? "")}</Chip> : <Chip size="sm">{t("No partner set")}</Chip>}
             {c.challan_payer_default === "client" && <ClientPaysChip />}
             {c.kind === "occasional" && <Chip tone="info" size="sm">{t("Walk-in")}</Chip>}
             {!c.active && <Chip size="sm">{t("Archived")}</Chip>}
             {c.esic_code && !c.esic_code_verified && <Chip tone="warning" icon={ShieldAlert} size="sm">{t("Check ESIC code")}</Chip>}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Phone: the main action full width, the rest in one even row */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <RecordPaymentButton clientId={c.id} className="col-span-2 sm:order-last" />
           {c.phone && <Button asChild variant="secondary"><a href={`tel:${c.phone}`}><Phone />{t("Call")}</a></Button>}
           {wa && <Button asChild variant="secondary"><a href={`https://wa.me/${waMeNumber(wa)}`} target="_blank" rel="noopener noreferrer"><MessageCircle />WhatsApp</a></Button>}
-          {!wa && <ContactButton target={{ clientId: c.id, firmName: c.firm_name, phone: null, whatsapp: null, language: c.preferred_language }} />}
+          {!wa && <ContactButton className="col-span-2" target={{ clientId: c.id, firmName: c.firm_name, phone: null, whatsapp: null, language: c.preferred_language }} />}
           <Button asChild variant="secondary"><Link href={`/clients/${c.id}/statement`}><FileText />{t("Statement")}</Link></Button>
           <EditClientButton client={c} />
-          <RecordPaymentButton clientId={c.id} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:nth-child(n+3)]:col-span-2 lg:[&>*:nth-child(n+3)]:col-span-1">
         <Card><CardBody><Figure label={t("Owes")} paise={d.balance.owes} tone={d.balance.owes ? "warning" : "success"} size="xl" /></CardBody></Card>
         <Card><CardBody><Figure label={t("Advance")} paise={d.balance.advance} tone={d.balance.advance ? "primary" : "muted"} size="xl" /></CardBody></Card>
         <Card><CardBody><Figure label={t("Usual service charge")} paise={c.default_charge_paise} size="xl" sub={t("per month")} /></CardBody></Card>
@@ -69,9 +70,9 @@ export function ClientView({ d }: { d: ClientDetail }) {
           <CardBody>
             <div className="text-xs font-medium tracking-wide text-ink-muted uppercase">{t("Codes")}</div>
             <dl className="mt-1.5 space-y-1 text-sm">
-              <div className="flex gap-2"><dt className="w-10 text-ink-muted">PF</dt><dd className="tabular truncate font-medium">{c.pf_establishment_code ?? "—"}</dd></div>
-              <div className="flex gap-2"><dt className="w-10 text-ink-muted">ESIC</dt><dd className={cn("tabular truncate font-medium", c.esic_code && !c.esic_code_verified && "text-warning")}>{c.esic_code ?? "—"}</dd></div>
-              {c.phone && <div className="flex gap-2"><dt className="w-10 text-ink-muted">{t("Ph.")}</dt><dd className="tabular font-medium">{formatIndianPhone(c.phone)}</dd></div>}
+              <div className="flex gap-2"><dt className="w-10 text-ink-muted">PF</dt><dd className="tabular min-w-0 font-medium break-all">{c.pf_establishment_code ?? "—"}</dd></div>
+              <div className="flex gap-2"><dt className="w-10 text-ink-muted">ESIC</dt><dd className={cn("tabular min-w-0 font-medium break-all", c.esic_code && !c.esic_code_verified && "text-warning")}>{c.esic_code ?? "—"}</dd></div>
+              {c.phone && <div className="flex gap-2"><dt className="w-10 text-ink-muted">{t("Ph.")}</dt><dd className="tabular font-medium whitespace-nowrap">{formatIndianPhone(c.phone)}</dd></div>}
             </dl>
           </CardBody>
         </Card>
@@ -82,7 +83,32 @@ export function ClientView({ d }: { d: ClientDetail }) {
         {d.months.length === 0 ? (
           <EmptyState icon={ReceiptIcon} title={t("No months yet")} body={t("Months appear here once a month is started on the This month page.")} />
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <>
+          <ul className="mt-3 divide-y divide-hairline md:hidden">
+            {d.months.map((m) => (
+              <li key={m.monthly_record_id} className="space-y-2.5 px-5 py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">{formatMonth(m.wage_month, lang)}</span>
+                  <StatusChip status={m.overall_status as RecordStatus} size="sm" />
+                </div>
+                <dl className="grid grid-cols-4 gap-2 text-xs">
+                  {([["PF", m.pf_paise], ["ESIC", m.esic_paise], [t("Fee"), m.charge_paise + m.extras_paise], [t("Owes"), m.owes]] as Array<[string, number | null]>).map(([k, v], i) => (
+                    <div key={k}><dt className="text-ink-muted">{k}</dt><dd className="tabular text-sm font-semibold">{v === null ? "—" : <Money paise={v} size="sm" tone={i === 3 && v > 0 ? (m.overdue ? "danger" : "warning") : "default"} />}</dd></div>
+                  ))}
+                </dl>
+                <div className="flex flex-wrap gap-1">
+                  {m.challan_payer === "client" && <ClientPaysChip />}
+                  {(["pf", "esic"] as const).map((ty) => {
+                    const st = CHALLAN[ty === "pf" ? m.pf_challan_status : m.esic_challan_status];
+                    const ch = m.challans.find((x) => x.type === ty);
+                    return <Chip key={ty} tone={st.tone} size="sm" className="h-6">{ty.toUpperCase()} {t(st.label)}{ch?.trrn ? ` · ${ch.trrn}` : ""}</Chip>;
+                  })}
+                </div>
+                <MonthActions month={m} client={c} partners={d.partners} />
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1000px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="[&>th]:h-10 [&>th]:border-y [&>th]:border-hairline [&>th]:bg-surface-2 [&>th]:px-4 [&>th]:text-xs [&>th]:font-semibold [&>th]:tracking-wide [&>th]:text-ink-muted [&>th]:uppercase">
@@ -117,6 +143,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 
@@ -128,13 +155,13 @@ export function ClientView({ d }: { d: ClientDetail }) {
           ) : (
             <ul className="mt-3 divide-y divide-hairline">
               {d.payments.map((p) => (
-                <li key={p.id} className={cn("flex items-center gap-3 px-5 py-3", p.voided && "opacity-60")}>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                <li key={p.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3", p.voided && "opacity-60")}>
+                  <div className="min-w-0 flex-1 basis-40">
+                    <div className="flex flex-wrap items-center gap-x-2">
                       <Money paise={p.amount} size="md" className={cn(p.voided && "line-through")} />
                       <span className="text-sm text-ink-muted">{t(MODE[p.mode])} · {t(p.received_by)}</span>
                     </div>
-                    <div className="text-xs text-ink-faint">{formatDate(p.received_on)}{p.reference ? ` · ${p.reference}` : ""}{p.voided ? ` · ${t("Void")}: ${p.void_reason}` : ""}</div>
+                    <div className="text-xs text-ink-faint">{formatDate(p.received_on)}{p.reference ? ` · ${p.reference}` : ""}{p.voided ? ` · ${t("Cancelled")}: ${p.void_reason}` : ""}</div>
                   </div>
                   {p.receipt_id && (
                     <Button asChild variant="ghost" size="sm"><Link href={`/receipts/${p.receipt_id}`}><ReceiptIcon />{p.receipt_no}</Link></Button>

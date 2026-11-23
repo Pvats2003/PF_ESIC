@@ -35,7 +35,7 @@ export function StatCard({
           <span className="tabular text-xl font-semibold tracking-[-0.02em] text-ink">{count}</span>
         )}
       </div>
-      {hint && <div className="mt-1 truncate text-xs text-ink-faint">{hint}</div>}
+      {hint && <div className="mt-1 line-clamp-2 text-xs text-ink-faint">{hint}</div>}
     </div>
   );
 }

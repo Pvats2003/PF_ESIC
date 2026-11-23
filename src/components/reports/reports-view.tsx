@@ -50,14 +50,14 @@ function PeriodPicker({ tab, from, to }: { tab: Tab; from: string; to: string })
   const { t } = useLang();
   return (
     <form
-      className="flex flex-wrap items-end gap-2"
+      className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 sm:flex sm:w-auto [&_input]:min-w-0"
       onSubmit={(e) => {
         e.preventDefault();
         router.push(`/reports?tab=${tab}&from=${f}&to=${toM}`);
       }}
     >
-      <div><Label htmlFor="r-from">{t("From")}</Label><Input id="r-from" type="month" value={f} onChange={(e) => setF(e.target.value)} className="w-44" /></div>
-      <div><Label htmlFor="r-to">{t("To")}</Label><Input id="r-to" type="month" value={toM} onChange={(e) => setToM(e.target.value)} className="w-44" /></div>
+      <div><Label htmlFor="r-from">{t("From")}</Label><Input id="r-from" type="month" value={f} onChange={(e) => setF(e.target.value)} className="w-full sm:w-44" /></div>
+      <div><Label htmlFor="r-to">{t("To")}</Label><Input id="r-to" type="month" value={toM} onChange={(e) => setToM(e.target.value)} className="w-full sm:w-44" /></div>
       <Button type="submit" variant="secondary">{t("Show")}</Button>
     </form>
   );
@@ -248,7 +248,7 @@ export function ReceiptRegister({ rows }: { rows: RegisterRow[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Segmented ariaLabel={t("Show")} value={show} onChange={setShow} options={[
-          { value: "all", label: `${t("All")} (${rows.length})` }, { value: "valid", label: t("Valid") }, { value: "void", label: `${t("Void")} (${rows.filter((r) => r.voided).length})` },
+          { value: "all", label: `${t("All")} (${rows.length})` }, { value: "valid", label: t("Valid") }, { value: "void", label: `${t("Cancelled")} (${rows.filter((r) => r.voided).length})` },
         ]} />
         <span className="text-sm text-ink-muted">{t("Valid receipts total")} <Money paise={total} size="sm" /></span>
       </div>
@@ -257,7 +257,7 @@ export function ReceiptRegister({ rows }: { rows: RegisterRow[] }) {
           <Table head={["Receipt", "Date", "Client", "Mode", "By", "Amount"]} rows={list.map((r) => [
             <span key="n" className="flex flex-col">
               <Link href={`/receipts/${r.id}`} className={cn("tabular font-semibold hover:text-primary-text", r.voided && "line-through opacity-60")}>{r.receipt_no}</Link>
-              {r.voided && <span className="text-xs font-normal text-danger">{t("Void")}: {r.void_reason}</span>}
+              {r.voided && <span className="text-xs font-normal text-danger">{t("Cancelled")}: {r.void_reason}</span>}
               {r.replaces && <span className="text-xs font-normal text-ink-muted">{t("Replaces {no}", { no: r.replaces })}</span>}
             </span>,
             formatDate(r.issued_on), r.firm_name, t(MODE[r.mode]), t(r.received_by), <Money key="a" paise={r.amount} size="sm" className={cn(r.voided && "line-through opacity-60")} />,
@@ -276,13 +276,13 @@ export function ExportView({ from, to }: { from: string; to: string }) {
     <Card className="max-w-2xl">
       <CardBody className="space-y-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-success-soft text-success"><FileSpreadsheet className="size-5" /></span>
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><FileSpreadsheet className="size-5" /></span>
           <div>
             <div className="font-semibold">{t("Excel backup in your old sheet's layout")}</div>
             <div className="text-sm text-ink-muted">{t("One sheet per month: SL. NO. · CONTRACTOR · PF · ESIC · TOTAL · CHARGE · REMARK, with a TOTAL row and one-off work below it. Plus a Payments sheet.")}</div>
           </div>
         </div>
-        <Button asChild size="lg"><a href={href} download><Download />{t("Download {from} to {to}", { from: formatMonth(from, lang), to: formatMonth(to.slice(0, 8) + "01", lang) })}</a></Button>
+        <Button asChild size="lg" className="h-auto min-h-13 w-full py-3 whitespace-normal sm:w-auto"><a href={href} download><Download />{t("Download {from} to {to}", { from: formatMonth(from, lang), to: formatMonth(to.slice(0, 8) + "01", lang) })}</a></Button>
         <p className="text-xs text-ink-faint">{t("Change the period above to export other months. Keep a copy every month as your safety net.")}</p>
       </CardBody>
     </Card>

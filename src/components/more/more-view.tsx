@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, ChevronRight, Keyboard, LogOut, Phone, Settings } from "lucide-react";
+import { BarChart3, CircleHelp, ChevronRight, Keyboard, LogOut, Phone, Settings } from "lucide-react";
 import Link from "next/link";
 import { LanguageChoice } from "@/components/app/language-toggle";
 import { ThemeToggle } from "@/components/app/theme-toggle";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 
 const LINKS = [
+  { href: "/help", label: "How it works", hint: "Your month in five steps", icon: CircleHelp },
   { href: "/entry", label: "Fast entry", hint: "Type PF and ESIC for every client", icon: Keyboard },
   { href: "/clients/phones", label: "Client phones", hint: "Type every client's phone and WhatsApp in one list", icon: Phone },
   { href: "/reports", label: "Reports", hint: "Reconciliation, settlement, receipts, Excel", icon: BarChart3 },

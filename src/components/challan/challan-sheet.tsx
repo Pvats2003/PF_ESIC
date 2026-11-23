@@ -120,7 +120,7 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
         <Segmented ariaLabel={t("Challan")} value={type} onChange={switchType} options={[{ value: "pf", label: "PF" }, { value: "esic", label: "ESIC" }]} />
         {existing && (
           <div className="rounded-xl bg-warning-soft p-3 text-sm text-warning ring-1 ring-warning-line ring-inset">
-            {t("A {type} challan is already saved ({no}). Saving replaces it; the old one stays in history as void.", { type: type.toUpperCase(), no: existing.trrn ?? existing.number ?? "—" })}
+            {t("A {type} challan is already saved ({no}). Saving replaces it; the old one stays in history as cancelled.", { type: type.toUpperCase(), no: existing.trrn ?? existing.number ?? "—" })}
           </div>
         )}
         <div>

@@ -71,7 +71,7 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{r.firm_name}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
-                      {r.partner_code ? <Chip tone="primary" size="sm" className="h-5 px-1.5">{t(r.partner_name ?? "")}</Chip> : <Chip size="sm" className="h-5 px-1.5">N</Chip>}
+                      {r.partner_code ? <Chip tone="primary" size="sm" className="h-5 px-1.5">{t(r.partner_name ?? "")}</Chip> : null}
                       {r.challan_payer_default === "client" && <ClientPaysChip />}
                       {r.esic_code && !r.esic_code_verified && <Chip tone="warning" icon={ShieldAlert} size="sm" className="h-5 px-1.5">{t("Check ESIC")}</Chip>}
                       {r.default_charge_paise === 0 && r.active && <span>{t("No charge set")}</span>}

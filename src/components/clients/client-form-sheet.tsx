@@ -2,9 +2,10 @@
 
 import { Pencil, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { saveClient, type ClientDetail, type ClientInput } from "@/app/(app)/actions";
+import { getSearchIndex, saveClient, type ClientDetail, type ClientInput, type SearchClient } from "@/app/(app)/actions";
+import Link from "next/link";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { FieldHint, Input, Label, MoneyInput } from "@/components/ui/input";
@@ -53,6 +54,16 @@ export function ClientFormSheet({ client, open, onOpenChange }: { client?: Clien
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const esicChanged = f.esic_code.replace(/\s/g, "") !== (client?.esic_code ?? "");
 
+  // Adding a client: warn if the name (or an old spelling) already exists, so nobody is added twice.
+  const [existing, setExisting] = useState<SearchClient[] | null>(null);
+  useEffect(() => {
+    if (client || !open || existing) return;
+    getSearchIndex().then((r) => r.ok && setExisting(r.data));
+  }, [client, open, existing]);
+  const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9&]+/g, " ").replace(/\b(M\/S|MS|THE)\b/g, "").replace(/\s+/g, " ").trim();
+  const typed = norm(f.firm_name);
+  const twin = !client && typed.length >= 4 ? existing?.find((c) => norm(c.firm_name) === typed || c.aliases.some((a) => norm(a) === typed)) : undefined;
+
   function submit() {
     const charge = f.charge.trim() === "" ? 0 : parseRupeesToPaise(f.charge);
     if (charge === null) return toast.error(t("Enter the service charge like 500"));
@@ -85,6 +96,12 @@ export function ClientFormSheet({ client, open, onOpenChange }: { client?: Clien
           <Segmented ariaLabel={t("Type")} value={f.kind} onChange={(v) => set("kind", v)} options={[{ value: "regular", label: t("Monthly client") }, { value: "occasional", label: t("Walk-in") }]} />
         )}
         <Field id="c-firm" label={t("Firm name")}><Input id="c-firm" value={f.firm_name} onChange={(e) => set("firm_name", e.target.value)} autoFocus={!client} /></Field>
+        {twin && (
+          <div role="status" className="-mt-2 rounded-xl bg-warning-soft p-3 text-sm ring-1 ring-warning-line ring-inset">
+            <span className="font-semibold text-warning">{t("{name} is already a client.", { name: twin.firm_name })}</span>{" "}
+            <Link href={`/clients/${twin.id}`} onClick={() => onOpenChange(false)} className="font-semibold text-primary-text underline">{t("Open them instead")}</Link>
+          </div>
+        )}
         <Field id="c-firm-hi" label={t("Firm name in Hindi (optional)")} hint={t("Used on Hindi receipts")}>
           <Input id="c-firm-hi" lang="hi" className="font-hindi" value={f.firm_name_hi} onChange={(e) => set("firm_name_hi", e.target.value)} />
         </Field>
