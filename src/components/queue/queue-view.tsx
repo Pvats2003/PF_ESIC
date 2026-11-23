@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowRight, CheckCheck, ChevronRight, FileCheck2, Keyboard, MessageCircle, Phone, Receipt, ShieldCheck, SkipForward, TriangleAlert } from "lucide-react";
+import { ArrowRight, CheckCheck, ChevronRight, FileCheck2, Keyboard, MessageCircle, Receipt, ShieldCheck, SkipForward, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { RowReminder } from "@/components/board/board-view";
+import { contactTarget, RowReminder } from "@/components/board/board-view";
+import { challanFigures, ContactButton } from "@/components/messages/contact-sheet";
 import { useLang } from "@/components/providers/lang-provider";
 import { WalkInButton } from "@/components/walkin/walk-in-sheet";
 import { ChallanSheet, VerifyChallanSheet, type ChallanMonth } from "@/components/challan/challan-sheet";
@@ -135,7 +136,6 @@ function QueueCard({ item, onAct }: { item: QueueItem; onAct: () => void }) {
   const r = item.row;
   const L = QUEUE_LABELS[item.kind];
   const Icon = ICONS[item.kind];
-  const phone = r.whatsapp_phone ?? r.phone;
   const { t, lang } = useLang();
   return (
     <Card className="p-6">
@@ -162,7 +162,7 @@ function QueueCard({ item, onAct }: { item: QueueItem; onAct: () => void }) {
         ) : (
           <Button size="lg" className="flex-1" onClick={onAct}>{(() => { const I = ICONS[item.kind]; return <I />; })()}{t(L.action)}</Button>
         )}
-        {phone && <Button asChild variant="secondary" size="lg"><a href={`tel:${phone}`}><Phone />{t("Call")}</a></Button>}
+        <ContactButton target={contactTarget(r)} className="h-13 px-5 text-base" />
       </div>
     </Card>
   );
@@ -173,7 +173,8 @@ function QueueAction({ item, partners, onClose, onDone }: { item: QueueItem; par
   const cm: ChallanMonth = { monthly_record_id: r.monthly_record_id, client_id: r.client_id, wage_month: r.wage_month, challan_payer: r.challan_payer, pf_paise: r.pf_paise, esic_paise: r.esic_paise, challans: r.challans };
   if (item.kind === "overdue" || item.kind === "remind") return <RowReminder row={r} onClose={onClose} onSent={onDone} />;
   if (item.kind === "file_challan") {
-    return <ChallanSheet month={cm} partners={partners} initialType={r.pf_challan_status === "PENDING" ? "pf" : "esic"} open onOpenChange={(o) => !o && onClose()} />;
+    const notify = { figures: { ...r, firm_name_hi: null, ...challanFigures(r.challans) }, phone: r.whatsapp_phone ?? r.phone, language: r.preferred_language };
+    return <ChallanSheet month={cm} partners={partners} notify={notify} initialType={r.pf_challan_status === "PENDING" ? "pf" : "esic"} open onOpenChange={(o) => !o && onClose()} />;
   }
   if (item.kind === "proof") {
     const c = (r.challans ?? []).find((x) => x.paid_by === "client" && !x.verified);

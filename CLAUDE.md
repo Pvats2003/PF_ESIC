@@ -37,8 +37,12 @@ on phones; installable PWA. Business: Rajeev Kumar Mishra, Munger, Bihar, 94304 
   client statement per FY (`/clients/[id]/statement`, hi/en, image/PDF), receipt PDF (`src/lib/export/image-pdf.ts`, pdf-lib).
 - **Hindi screens: done.** Every screen in Hindi or English, chosen per device (sidebar/phone top bar toggle, Settings,
   More; stored in localStorage `pfesic:lang` + cookie). Receipts/messages still follow each client's language. No SQL change.
+- **Contact slice: done.** Call / WhatsApp sheet (`src/components/messages/contact-sheet.tsx`, rules in `src/lib/domain/contact.ts`)
+  on every board row (desktop icon, phone icon + swipe left), client-page months and Today: call, chat, and any ready
+  message with the suggested one first; adds a phone inline if missing. After saving a challan we paid: "Tell the client"
+  (challan_filed message). Fast phone entry `/clients/phones` (`set_client_phones`, update 6 = 20261129).
 - **Live database updates are paste-once SQL files** built from the new migrations (update 2 = 20261125, update 3 = 20261126,
-  update 4 = 20261127, update 5 = 20261128). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
+  update 4 = 20261127, update 5 = 20261128, update 6 = 20261129). Write migrations so they can run twice (`create or replace`, `on conflict do nothing`).
 - Reports read `live_ledger` (financial_ledger minus legacy_settled months and minus voided entries and their reversals), so imported history never distorts
   "government money held".
 - Phase 2 (core app) and Phase 3 (automation) follow; see the brief.

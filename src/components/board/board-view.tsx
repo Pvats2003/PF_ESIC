@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, BadgeCheck, MessageCircle, X, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
+import { ArrowRight, BadgeCheck, PhoneCall, X, BadgeIndianRupee, ChevronLeft, ChevronRight, FileCheck2, Keyboard, Landmark, PartyPopper, Plus, Search, Send, ShieldAlert, Wallet, CalendarPlus } from "lucide-react";
 import { motion, useReducedMotion, type PanInfo } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { startMonth } from "@/app/(app)/actions";
+import { challanFigures, ContactSheet, type ContactTarget } from "@/components/messages/contact-sheet";
 import { ReminderSheet } from "@/components/messages/reminder-sheet";
 import { RecordPaymentSheet } from "@/components/payment/record-payment-sheet";
 import { useLang } from "@/components/providers/lang-provider";
@@ -31,6 +32,7 @@ export function BoardView({ board }: { board: Board }) {
   const [query, setQuery] = useState("");
   const [payFor, setPayFor] = useState<string | null>(null);
   const [remindFor, setRemindFor] = useState<BoardRow | null>(null);
+  const [contactFor, setContactFor] = useState<BoardRow | null>(null);
   const s = useMemo(() => summarize(board.rows), [board.rows]);
   const due = board.rows[0]?.due_date ?? dueDateFor(board.month, board.due_day);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, board.rows.filter((r) => matchesFilter(r, f.id)).length])), [board.rows]);
@@ -129,8 +131,8 @@ export function BoardView({ board }: { board: Board }) {
             </Card>
           ) : (
             <>
-              <DesktopTable rows={rows} onPay={setPayFor} onRemind={setRemindFor} />
-              <PhoneList rows={rows} onPay={setPayFor} onRemind={setRemindFor} />
+              <DesktopTable rows={rows} onPay={setPayFor} onRemind={setRemindFor} onContact={setContactFor} />
+              <PhoneList rows={rows} onPay={setPayFor} onContact={setContactFor} />
             </>
           )}
         </>
@@ -138,6 +140,7 @@ export function BoardView({ board }: { board: Board }) {
 
       {payFor && <RecordPaymentSheet clientId={payFor} open onOpenChange={(o) => !o && setPayFor(null)} />}
       {remindFor && <RowReminder row={remindFor} onClose={() => setRemindFor(null)} />}
+      {contactFor && <ContactSheet target={contactTarget(contactFor)} open onOpenChange={(o) => !o && setContactFor(null)} />}
     </div>
   );
 }
@@ -177,6 +180,16 @@ const statusOf = (r: BoardRow): RecordStatus => r.overall_status as RecordStatus
 const pendingAmounts = (r: BoardRow) => r.amount_status === "AMOUNTS_PENDING" && r.challan_payer === "us";
 const dash = <span className="text-ink-faint">—</span>;
 
+/** Everything the Call / WhatsApp sheet needs about a board row. */
+export function contactTarget(r: BoardRow): ContactTarget {
+  return {
+    clientId: r.client_id, firmName: r.firm_name, phone: r.phone, whatsapp: r.whatsapp_phone, language: r.preferred_language,
+    month: r.amount_status === "ENTERED" && !r.legacy_settled
+      ? { monthlyRecordId: r.monthly_record_id, figures: { ...r, firm_name_hi: null, ...challanFigures(r.challans) }, hasChallan: !!r.challans?.length, latestReceiptId: r.latest_receipt_id }
+      : undefined,
+  };
+}
+
 export function RowReminder({ row, onClose, onSent }: { row: BoardRow; onClose: () => void; onSent?: () => void }) {
   return (
     <ReminderSheet
@@ -187,12 +200,12 @@ export function RowReminder({ row, onClose, onSent }: { row: BoardRow; onClose: 
       monthlyRecordId={row.monthly_record_id}
       phone={row.whatsapp_phone ?? row.phone}
       language={row.preferred_language}
-      figures={{ ...row, firm_name_hi: null }}
+      figures={{ ...row, firm_name_hi: null, ...challanFigures(row.challans) }}
     />
   );
 }
 
-function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
+function DesktopTable({ rows, onPay, onRemind, onContact }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void; onContact: (r: BoardRow) => void }) {
   const reduce = useReducedMotion();
   const { t } = useLang();
   const totals = summarize(rows);
@@ -210,7 +223,7 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
               <th className="text-right">{t("Received")}</th>
               <th className="text-right">{t("Owes")}</th>
               <th className="text-left">{t("Status")}</th>
-              <th className="w-24"><span className="sr-only">{t("Actions")}</span></th>
+              <th className="w-32"><span className="sr-only">{t("Actions")}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -247,6 +260,9 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
                       <Send />
                     </Button>
                   )}
+                  <Button variant="ghost" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} title={t("Call or WhatsApp")} onClick={() => onContact(r)} className="size-9">
+                    <PhoneCall />
+                  </Button>
                   {r.owes > 0 && (
                     <Button variant="ghost" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={() => onPay(r.client_id)} className="size-9">
                       <Wallet />
@@ -274,7 +290,7 @@ function DesktopTable({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id:
   );
 }
 
-function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: string) => void; onRemind: (r: BoardRow) => void }) {
+function PhoneList({ rows, onPay, onContact }: { rows: BoardRow[]; onPay: (id: string) => void; onContact: (r: BoardRow) => void }) {
   const [hint, setHint] = useState(false);
   const { t, lang } = useLang();
   useEffect(() => {
@@ -292,14 +308,14 @@ function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: st
       {hint && (
         <div className="mb-3 flex items-center gap-3 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-ink ring-1 ring-inset ring-[color-mix(in_oklab,var(--accent)_40%,transparent)]">
           <span className="flex-1">{lang === "hi"
-            ? <>सुझाव: भुगतान दर्ज करने के लिए ग्राहक को <strong>दाएँ</strong> खिसकाएँ, व्हाट्सऐप रिमाइंडर के लिए <strong>बाएँ</strong>।</>
-            : <>Tip: swipe a client <strong>right</strong> to record a payment, <strong>left</strong> to send a WhatsApp reminder.</>}</span>
+            ? <>सुझाव: भुगतान दर्ज करने के लिए ग्राहक को <strong>दाएँ</strong> खिसकाएँ, कॉल या व्हाट्सऐप के लिए <strong>बाएँ</strong>।</>
+            : <>Tip: swipe a client <strong>right</strong> to record a payment, <strong>left</strong> to call or WhatsApp.</>}</span>
           <button onClick={seen} aria-label={t("Got it")} className="grid size-9 place-items-center rounded-lg text-ink-muted"><X className="size-4" /></button>
         </div>
       )}
       <Card className="overflow-hidden">
         <ul className="divide-y divide-hairline">
-          {rows.map((r) => <SwipeRow key={r.monthly_record_id} r={r} onPay={() => { seen(); onPay(r.client_id); }} onRemind={() => { seen(); onRemind(r); }} />)}
+          {rows.map((r) => <SwipeRow key={r.monthly_record_id} r={r} onPay={() => { seen(); onPay(r.client_id); }} onContact={() => { seen(); onContact(r); }} />)}
         </ul>
       </Card>
     </div>
@@ -308,18 +324,17 @@ function PhoneList({ rows, onPay, onRemind }: { rows: BoardRow[]; onPay: (id: st
 
 const SWIPE = 90;
 
-function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRemind: () => void }) {
+function SwipeRow({ r, onPay, onContact }: { r: BoardRow; onPay: () => void; onContact: () => void }) {
   const reduce = useReducedMotion();
   const { t } = useLang();
   const canPay = r.owes > 0;
-  const canRemind = r.amount_status === "ENTERED" && r.overall_status !== "DONE" && (r.owes > 0 || r.challan_payer === "client");
   // A swipe must not also count as a tap on the client's name (which would open the client page).
   const dragged = useRef(false);
   const onDragEnd = (_: unknown, info: PanInfo) => {
     // The tap (click) can arrive before or after this; keep blocking it briefly.
     setTimeout(() => (dragged.current = false), 350);
     if (info.offset.x > SWIPE && canPay) onPay();
-    else if (info.offset.x < -SWIPE && canRemind) onRemind();
+    else if (info.offset.x < -SWIPE) onContact();
   };
   const blockTapAfterSwipe = (e: React.MouseEvent) => {
     if (dragged.current) e.preventDefault();
@@ -329,13 +344,13 @@ function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRe
       {/* What's under the row while swiping */}
       <div aria-hidden className="absolute inset-0 flex items-center justify-between px-5 text-sm font-semibold">
         <span className={cn("flex items-center gap-2", canPay ? "text-success" : "text-ink-faint")}><Wallet className="size-5" />{t("Payment")}</span>
-        <span className={cn("flex items-center gap-2", canRemind ? "text-success" : "text-ink-faint")}>WhatsApp<MessageCircle className="size-5" /></span>
+        <span className="flex items-center gap-2 text-success">{t("Call / WhatsApp")}<PhoneCall className="size-5" /></span>
       </div>
       <motion.div
         drag={reduce ? false : "x"}
         dragDirectionLock
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={{ left: canRemind ? 0.6 : 0.1, right: canPay ? 0.6 : 0.1 }}
+        dragElastic={{ left: 0.6, right: canPay ? 0.6 : 0.1 }}
         onDragStart={() => (dragged.current = true)}
         onDragEnd={onDragEnd}
         className="relative flex touch-pan-y items-center gap-3 bg-surface px-4 py-3"
@@ -351,6 +366,7 @@ function SwipeRow({ r, onPay, onRemind }: { r: BoardRow; onPay: () => void; onRe
           {pendingAmounts(r) ? <span className="text-sm text-ink-faint">—</span> : r.owes ? <Money paise={r.owes} size="md" tone={r.overdue ? "danger" : "default"} /> : <Money paise={r.received} size="md" tone="success" />}
           <div className="text-xs text-ink-faint">{t(pendingAmounts(r) ? "enter PF/ESIC" : r.owes ? "owes" : r.received ? "received" : "nothing due")}</div>
         </div>
+        <Button variant="ghost" size="icon" aria-label={t("Call or WhatsApp {name}", { name: r.firm_name })} onClick={onContact} className="-mx-1 text-ink-muted"><PhoneCall /></Button>
         {canPay ? (
           <Button variant="soft" size="icon" aria-label={t("Record payment for {name}", { name: r.firm_name })} onClick={onPay}><Wallet /></Button>
         ) : (

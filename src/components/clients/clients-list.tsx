@@ -1,9 +1,10 @@
 "use client";
 
-import { Search, ShieldAlert, Users } from "lucide-react";
+import { Phone, Search, ShieldAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useLang } from "@/components/providers/lang-provider";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { AddClientButton } from "./client-form-sheet";
 import { cn } from "@/lib/utils";
 
 export interface ClientListRow {
-  id: string; firm_name: string; owner_name: string | null; phone: string | null; kind: "regular" | "occasional"; active: boolean;
+  id: string; firm_name: string; owner_name: string | null; phone: string | null; whatsapp_phone: string | null; kind: "regular" | "occasional"; active: boolean;
   default_charge_paise: number; challan_payer_default: "us" | "client"; partner_code: "A" | "R" | null; partner_name: string | null;
   esic_code: string | null; esic_code_verified: boolean; owes: number; advance: number; aliases: string[];
 }
@@ -33,6 +34,7 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
       ),
     [rows, q, show],
   );
+  const missing = rows.filter((r) => r.active && !r.phone && !r.whatsapp_phone).length;
   const fees = list.filter((r) => r.active).reduce((a, r) => a + r.default_charge_paise, 0);
 
   return (
@@ -46,6 +48,7 @@ export function ClientsList({ rows }: { rows: ClientListRow[] }) {
           <Segmented ariaLabel={t("Show")} value={show} onChange={setShow} options={[
             { value: "active", label: t("Active") }, { value: "owes", label: t("Owes") }, { value: "check", label: t("Codes to check") }, { value: "all", label: t("All") },
           ]} />
+          <Button asChild variant="secondary"><Link href="/clients/phones"><Phone />{missing ? t("Add phones ({n} missing)", { n: missing }) : t("Phones")}</Link></Button>
           <AddClientButton />
           <div className="relative sm:w-72">
             <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" />

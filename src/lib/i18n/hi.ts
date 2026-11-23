@@ -527,6 +527,44 @@ export const HI: Record<string, string> = {
   "{month} is already started": "{month} पहले से शुरू है",
   "Export {month} to Excel": "{month} एक्सेल में निकालें",
 
+  // ── Call / WhatsApp sheet, challan "tell the client", phone entry ──
+  "Phones": "फ़ोन नंबर",
+  "Client phones": "ग्राहकों के फ़ोन",
+  "Call or WhatsApp {name}": "{name} को कॉल या व्हाट्सऐप",
+  "Call or WhatsApp": "कॉल या व्हाट्सऐप",
+  "Call / WhatsApp": "कॉल / व्हाट्सऐप",
+  "WhatsApp chat": "व्हाट्सऐप चैट",
+  "Send a ready message": "तैयार संदेश भेजें",
+  "Suggested": "सुझाया",
+  "Phone saved": "फ़ोन सेव हुआ",
+  "No phone saved yet. Add one to call and WhatsApp directly:": "अभी कोई फ़ोन नहीं है। सीधे कॉल और व्हाट्सऐप के लिए नंबर जोड़ें:",
+  "Challan ready": "चालान तैयार",
+  "Payment thanks with receipt": "रसीद के साथ भुगतान धन्यवाद",
+  "PF + ESIC + our fee, and the date to pay by": "PF + ESIC + हमारी फीस, और भुगतान की आख़िरी तारीख़",
+  "Their PF/ESIC figures to pay, and our fee": "उन्हें भरनी PF/ESIC राशि, और हमारी फीस",
+  "Polite reminder that money is still owed": "विनम्र याद कि पैसा अभी बाकी है",
+  "TRRN and challan numbers, so they know it's paid": "TRRN और चालान नंबर, ताकि उन्हें पता रहे कि जमा हो गया",
+  "Sends the latest receipt": "आख़िरी रसीद भेजता है",
+  "Tell the client": "ग्राहक को बताएँ",
+  "Not now": "अभी नहीं",
+  "Send the client a WhatsApp message that their challan is paid, with the TRRN and challan numbers?": "ग्राहक को व्हाट्सऐप पर बताएँ कि उनका चालान जमा हो गया, TRRN और चालान नंबर के साथ?",
+  "A {type} challan is already saved ({no}). Saving replaces it; the old one stays in history as void.": "{type} चालान पहले से सेव है ({no})। सेव करने पर यह बदल जाएगा; पुराना रद्द लिखकर इतिहास में रहेगा।",
+  "Entered {type} for this month is {amount}": "इस महीने भरा {type} {amount} है",
+  "Challan PDF or screenshot (optional)": "चालान PDF या स्क्रीनशॉट (वैकल्पिक)",
+  "Challan PDF or screenshot": "चालान PDF या स्क्रीनशॉट",
+  "Add phones ({n} missing)": "फ़ोन जोड़ें ({n} बाकी)",
+  "Phone for {name}": "{name} का फ़ोन",
+  "WhatsApp for {name}": "{name} का व्हाट्सऐप",
+  "Same as phone": "फ़ोन जैसा ही",
+  "Type each number and press Enter for the next client. Everything saves as you go. Fill WhatsApp only if it's a different number.": "नंबर लिखें और अगले ग्राहक के लिए Enter दबाएँ। सब अपने आप सेव होता है। व्हाट्सऐप तभी भरें जब नंबर अलग हो।",
+  "have a phone": "के फ़ोन हैं",
+  "Missing": "बाकी",
+  "Every client has a phone": "हर ग्राहक का फ़ोन है",
+  "Switch to All to change a number.": "नंबर बदलने के लिए ‘सभी’ चुनें।",
+  "Copied": "कॉपी हुआ",
+  "No phone saved: you'll pick the chat": "फ़ोन नहीं है: चैट आप चुनेंगे",
+  "Type every client's phone and WhatsApp in one list": "सभी ग्राहकों के फ़ोन और व्हाट्सऐप एक सूची में भरें",
+
   // ── Errors from the server (validation and database rules) ──
   "Something went wrong. Please try again.": "कुछ गड़बड़ हुई। फिर से कोशिश करें।",
   "A message can't be empty": "संदेश खाली नहीं हो सकता",
@@ -582,3 +620,12 @@ export const HI: Record<string, string> = {
   "Void the old receipt before issuing its replacement": "नई रसीद से पहले पुरानी रद्द करें",
   "Verification cannot be changed once given.": "एक बार पक्का करने के बाद बदला नहीं जा सकता।",
 };
+
+/** Server messages that carry a value (a typed number, an amount): regex → Hindi with $1, $2… */
+export const HI_PATTERNS: Array<[RegExp, string]> = [
+  [/^“(.+)” isn't a valid Indian mobile number$/, "“$1” सही भारतीय मोबाइल नंबर नहीं है"],
+  [/^(PF|ESIC) challan (.+) is ₹([\d,.]+) but (PF|ESIC) entered for the month is ₹([\d,.]+)$/, "$1 चालान $2 ₹$3 का है, पर महीने में $4 ₹$5 भरा है"],
+  [/^Payment of ₹([\d,.]+) on (\S+) has (\d+) valid receipts \(should be 1\)$/, "$2 के ₹$1 के भुगतान की $3 मान्य रसीदें हैं (1 होनी चाहिए)"],
+  [/^Receipt numbers for (\S+) run to (\d+) but only (\d+) exist$/, "$1 की रसीद संख्या $2 तक है, पर सिर्फ़ $3 बनी हैं"],
+  [/^(.+) deposited ₹([\d,.]+) more than collected in this period \(paid from own pocket, or a payment is missing\)$/, "$1 ने इस अवधि में लिए से ₹$2 ज़्यादा जमा किया (अपनी जेब से भरा, या कोई भुगतान दर्ज नहीं है)"],
+];

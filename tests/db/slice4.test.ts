@@ -90,3 +90,20 @@ describe("client statement", () => {
     expect(st2.opening).toBe(R(300)); // April partly unpaid
   });
 });
+
+describe("fast phone entry", () => {
+  it("changes only the phone and WhatsApp number", async () => {
+    const id = (await c.query(`insert into clients (firm_name, default_charge_paise, notes) values ('Phone Test Works', 50000, 'keep me') returning id`)).rows[0].id;
+    await call(`select set_client_phones($1, $2, $3)`, [id, "+919430449312", null]);
+    const row = (await c.query(`select phone, whatsapp_phone, default_charge_paise::int charge, notes from clients where id=$1`, [id])).rows[0];
+    expect(row).toEqual({ phone: "+919430449312", whatsapp_phone: null, charge: 50000, notes: "keep me" });
+    await expect(call(`select set_client_phones($1, $2, $3)`, [id, "12345", null])).rejects.toThrow(/check/i); // stored numbers stay +91XXXXXXXXXX
+  });
+
+  it("is not available to anyone signed out", async () => {
+    await c.query("begin");
+    await c.query("set local role anon");
+    await expect(c.query(`select set_client_phones(gen_random_uuid(), null, null)`)).rejects.toThrow(/permission denied/);
+    await c.query("rollback");
+  });
+});

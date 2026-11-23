@@ -67,6 +67,11 @@ test("send a reminder, then file the challan", async ({ page }) => {
   await page.getByLabel("TRRN").fill("3162612004578");
   await page.getByRole("button", { name: "Save challan" }).click();
   await expect(page.getByText("PF challan saved")).toBeVisible();
+  // We paid it, so the app offers to tell the client, with the TRRN in the message
+  await page.getByRole("button", { name: "Tell the client" }).click();
+  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue(/3162612004578/);
+  await page.getByRole("button", { name: "Send on WhatsApp" }).click();
+  await expect(page.getByText("Message handed to WhatsApp")).toBeVisible();
   await expect(nov).toContainText("PF Filed · 3162612004578");
   await expect(page.getByRole("listitem").filter({ hasText: "Dues reminder" }).filter({ hasText: "Shared" }).first()).toBeVisible(); // message history
 });

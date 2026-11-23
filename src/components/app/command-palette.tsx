@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { BarChart3, CalendarPlus, CalendarRange, FileSpreadsheet, Keyboard, ListTodo, Search, Settings, UserRound, UserRoundPlus, Users, Wallet } from "lucide-react";
+import { Phone, BarChart3, CalendarPlus, CalendarRange, FileSpreadsheet, Keyboard, ListTodo, Search, Settings, UserRound, UserRoundPlus, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -20,6 +20,7 @@ const PAGES: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/queue", label: "Today's queue", icon: ListTodo },
   { href: "/entry", label: "Enter PF/ESIC", icon: Keyboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/clients/phones", label: "Client phones", icon: Phone },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -90,14 +90,14 @@ export function ReminderSheet({ clientId, monthlyRecordId, figures, phone, langu
       footer={
         <div className="flex gap-2">
           <Button variant="whatsapp" size="lg" className="flex-1" disabled={!text} onClick={send}><MessageCircle />{t("Send on WhatsApp")}</Button>
-          <Button variant="secondary" size="lg" aria-label={t("Copy message")} disabled={!text} onClick={async () => { await navigator.clipboard.writeText(text); toast("Copied"); }}><Copy /></Button>
+          <Button variant="secondary" size="lg" aria-label={t("Copy message")} disabled={!text} onClick={async () => { await navigator.clipboard.writeText(text); toast(t("Copied")); }}><Copy /></Button>
         </div>
       }
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <Segmented ariaLabel={t("Language")} value={lang} onChange={changeLang} options={[{ value: "hi", label: <span className="font-hindi">हिंदी</span> }, { value: "en", label: t("English") }]} />
-          {!phone && <span className="text-xs text-warning">No phone saved: you&apos;ll pick the chat</span>}
+          {!phone && <span className="text-xs text-warning">{t("No phone saved: you'll pick the chat")}</span>}
         </div>
         {!setup ? (
           <Skeleton className="h-56 w-full rounded-xl" />

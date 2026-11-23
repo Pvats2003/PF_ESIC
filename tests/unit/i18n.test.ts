@@ -28,7 +28,7 @@ function keysInSource(): Map<string, string> {
     for (const m of s.matchAll(/\bt\(([^()"]*\?\s*"[^"]*"\s*:[^()]*)\)/g)) for (const q of m[1].matchAll(/"([^"]*)"/g)) add(q[1], p);
     for (const m of s.matchAll(/<Tr k="([^"]*)"/g)) add(m[1], p);
     // Label tables translated where they're shown: { label: "…" }, { title: "…" }, head={["…"]}
-    for (const m of s.matchAll(/\b(?:label|title|when|hint|action): "([^"]*[a-z][^"]*)"/g)) add(m[1], p);
+    for (const m of s.matchAll(/\b(?:label|title|when|hint|action|why): "([^"]*[a-z][^"]*)"/g)) add(m[1], p);
     for (const m of s.matchAll(/head=\{\[([^\]]*)\]/g)) for (const q of m[1].matchAll(/"([^"]*)"/g)) add(q[1], p);
   }
   return keys;

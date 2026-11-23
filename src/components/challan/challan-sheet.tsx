@@ -1,6 +1,6 @@
 "use client";
 
-import { FileCheck2, Paperclip, ShieldCheck } from "lucide-react";
+import { Check, FileCheck2, MessageCircle, Paperclip, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,7 +9,9 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { FieldHint, Input, Label, MoneyInput } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
-import { formatMonth, todayIST } from "@/lib/format/dates";
+import { ReminderSheet } from "@/components/messages/reminder-sheet";
+import type { MonthFigures } from "@/lib/domain/messages";
+import { formatMonth, todayIST, type Lang } from "@/lib/format/dates";
 import { formatINR, parseRupeesToPaise } from "@/lib/format/money";
 import { useLang } from "@/components/providers/lang-provider";
 
@@ -28,8 +30,11 @@ type Partner = { id: string; code: "A" | "R"; name: string };
 const ACCEPT = "application/pdf,image/png,image/jpeg,image/webp";
 const rupees = (p: number | null) => (p === null ? "" : p % 100 === 0 ? String(p / 100) : (p / 100).toFixed(2));
 
-export function ChallanSheet({ month, partners, initialType = "pf", open, onOpenChange }: {
-  month: ChallanMonth; partners: Partner[]; initialType?: "pf" | "esic"; open: boolean; onOpenChange: (o: boolean) => void;
+/** What's needed to offer the "Challan filed" WhatsApp message right after saving. */
+export interface ChallanNotify { figures: MonthFigures; phone: string | null; language: Lang }
+
+export function ChallanSheet({ month, partners, initialType = "pf", open, onOpenChange, notify }: {
+  month: ChallanMonth; partners: Partner[]; initialType?: "pf" | "esic"; open: boolean; onOpenChange: (o: boolean) => void; notify?: ChallanNotify;
 }) {
   const { t, lang } = useLang();
   const router = useRouter();
@@ -44,6 +49,8 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
   const [file, setFile] = useState<File | null>(null);
   const [verifyNow, setVerifyNow] = useState(false);
   const [reason, setReason] = useState("");
+  const [saved, setSaved] = useState<{ type: "pf" | "esic"; reference: string; paidOn: string } | null>(null);
+  const [telling, setTelling] = useState(false);
 
   function switchType(t: "pf" | "esic") {
     setType(t);
@@ -62,12 +69,41 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
     start(async () => {
       const r = await saveChallan(fd);
       if (!r.ok) return void toast.error(t("Challan not saved"), { description: t(r.error) });
+      router.refresh();
+      if (paidBy === "us" && notify) return setSaved({ type, reference: reference.trim(), paidOn });
       toast.success(t(existing ? "{type} challan corrected" : "{type} challan saved", { type: type.toUpperCase() }), {
         description: paidBy === "client" && !verifyNow ? t("Attach and confirm the client's proof to finish this month.") : undefined,
       });
       onOpenChange(false);
-      router.refresh();
     });
+  }
+
+  if (saved && notify) {
+    const figures: MonthFigures = {
+      ...notify.figures,
+      ...(saved.type === "pf" ? { pf_trrn: saved.reference } : { esic_challan_no: saved.reference }),
+      challan_paid_on: saved.paidOn,
+    };
+    if (telling) {
+      return (
+        <ReminderSheet open kind="challan_filed" onOpenChange={(o) => !o && onOpenChange(false)} clientId={month.client_id}
+          monthlyRecordId={month.monthly_record_id} phone={notify.phone} language={notify.language} figures={figures} />
+      );
+    }
+    return (
+      <BottomSheet open={open} onOpenChange={onOpenChange} title={t("{type} challan saved", { type: saved.type.toUpperCase() })} description={formatMonth(month.wage_month, lang)}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="whatsapp" size="lg" className="flex-1" onClick={() => setTelling(true)}><MessageCircle />{t("Tell the client")}</Button>
+            <Button variant="secondary" size="lg" onClick={() => onOpenChange(false)}>{t("Not now")}</Button>
+          </div>
+        }>
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-success-soft text-success"><Check className="size-6 stroke-[2.5]" /></span>
+          <p className="text-sm text-ink-muted">{t("Send the client a WhatsApp message that their challan is paid, with the TRRN and challan numbers?")}</p>
+        </div>
+      </BottomSheet>
+    );
   }
 
   const expected = type === "pf" ? month.pf_paise : month.esic_paise;
@@ -84,7 +120,7 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
         <Segmented ariaLabel={t("Challan")} value={type} onChange={switchType} options={[{ value: "pf", label: "PF" }, { value: "esic", label: "ESIC" }]} />
         {existing && (
           <div className="rounded-xl bg-warning-soft p-3 text-sm text-warning ring-1 ring-warning-line ring-inset">
-            A {type.toUpperCase()} challan is already saved ({existing.trrn ?? existing.number}). Saving replaces it; the old one stays in history as void.
+            {t("A {type} challan is already saved ({no}). Saving replaces it; the old one stays in history as void.", { type: type.toUpperCase(), no: existing.trrn ?? existing.number ?? "—" })}
           </div>
         )}
         <div>
@@ -96,7 +132,7 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
             <Label htmlFor="ch-amt">{t("Amount")}</Label>
             <MoneyInput id="ch-amt" value={amount} onChange={(e) => setAmount(e.target.value)} />
             {expected !== null && amountPaise !== null && amountPaise !== expected && (
-              <FieldHint error>Entered PF/ESIC for this month is {formatINR(expected)}</FieldHint>
+              <FieldHint error>{t("Entered {type} for this month is {amount}", { type: type.toUpperCase(), amount: formatINR(expected) })}</FieldHint>
             )}
           </div>
           <div>
@@ -117,7 +153,7 @@ export function ChallanSheet({ month, partners, initialType = "pf", open, onOpen
           )}
         </div>
         <div>
-          <Label htmlFor="ch-file">Challan PDF or screenshot {paidBy === "us" ? "(optional)" : ""}</Label>
+          <Label htmlFor="ch-file">{paidBy === "us" ? t("Challan PDF or screenshot (optional)") : t("Challan PDF or screenshot")}</Label>
           <label htmlFor="ch-file" className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-hairline-strong px-3.5 py-2.5 text-sm text-ink-muted hover:bg-surface-2">
             <Paperclip className="size-4 shrink-0" />
             <span className="truncate">{file ? file.name : t("Choose a file (PDF or image, up to 4 MB)")}</span>

@@ -192,6 +192,21 @@ export async function saveClient(clientId: string | null, input: ClientInput): P
   });
 }
 
+const phonesSchema = z.object({ clientId: uuid, phone: phoneField, whatsapp: phoneField });
+
+/** Fast phone entry: only the phone and WhatsApp number change. Returns the stored (normalised) numbers. */
+export async function setClientPhones(input: z.input<typeof phonesSchema>): Promise<ActionResult<{ phone: string | null; whatsapp: string | null }>> {
+  const v = phonesSchema.safeParse(input);
+  if (!v.success) return { ok: false, error: v.error.issues[0]?.message ?? "Check the details" };
+  return run(async () => {
+    await (await requireDb()).rpc("set_client_phones", { p_client_id: v.data.clientId, p_phone: v.data.phone, p_whatsapp: v.data.whatsapp });
+    revalidatePath("/clients");
+    revalidatePath(`/clients/${v.data.clientId}`);
+    revalidatePath("/");
+    return { phone: v.data.phone, whatsapp: v.data.whatsapp };
+  });
+}
+
 export async function getMessageSetup(): Promise<ActionResult<MessageSetup>> {
   return run(async () => (await requireDb()).rpc<MessageSetup>("message_setup"));
 }

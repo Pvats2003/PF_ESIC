@@ -4,6 +4,7 @@ import { ChevronLeft, FileText, MessageCircle, Phone, Receipt as ReceiptIcon, Sh
 import Link from "next/link";
 import type { ClientDetail } from "@/app/(app)/actions";
 import { useLang } from "@/components/providers/lang-provider";
+import { ContactButton } from "@/components/messages/contact-sheet";
 import { VoidPaymentButton } from "@/components/payment/corrections";
 import { RecordPaymentButton } from "@/components/payment/record-payment-sheet";
 import { EditClientButton } from "./client-form-sheet";
@@ -53,6 +54,7 @@ export function ClientView({ d }: { d: ClientDetail }) {
         <div className="flex flex-wrap gap-2">
           {c.phone && <Button asChild variant="secondary"><a href={`tel:${c.phone}`}><Phone />{t("Call")}</a></Button>}
           {wa && <Button asChild variant="secondary"><a href={`https://wa.me/${waMeNumber(wa)}`} target="_blank" rel="noopener noreferrer"><MessageCircle />WhatsApp</a></Button>}
+          {!wa && <ContactButton target={{ clientId: c.id, firmName: c.firm_name, phone: null, whatsapp: null, language: c.preferred_language }} />}
           <Button asChild variant="secondary"><Link href={`/clients/${c.id}/statement`}><FileText />{t("Statement")}</Link></Button>
           <EditClientButton client={c} />
           <RecordPaymentButton clientId={c.id} />
